@@ -1,31 +1,30 @@
 package handler
 
 import (
-	"accomodation-service/model"
 	"accomodation-service/service"
-	"encoding/json"
-	"fmt"
-	"net/http"
+	"context"
+
+	pb "github.com/XML-organization/common/proto/accomodation_service"
 )
 
 type AccomodationHandler struct {
+	pb.UnimplementedAccomodationServiceServer
 	Service *service.AccomodationService
 }
 
-func (handler *AccomodationHandler) CreateAccomodation(w http.ResponseWriter, r *http.Request) {
-	var accomodation model.Accomodation
-	err := json.NewDecoder(r.Body).Decode(&accomodation)
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
+func NewAccomodationHandler(service *service.AccomodationService) *AccomodationHandler {
+	return &AccomodationHandler{
+		Service: service,
 	}
-	err = handler.Service.CreateAccomodation(&accomodation)
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusExpectationFailed)
-		return
+}
+
+func (handler *AccomodationHandler) Create(ctx context.Context, request *pb.CreateRequest) (*pb.CreateResponse, error) {
+	accomodation := mapAccomodationFromCreateAccomodation(request)
+	message, err := handler.Service.CreateAccomodation(accomodation)
+	response := pb.CreateResponse{
+		Message: message.Message,
 	}
-	w.WriteHeader(http.StatusCreated)
-	w.Header().Set("Content-Type", "application/json")
+
+	return &response, err
+
 }

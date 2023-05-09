@@ -9,11 +9,17 @@ type AccomodationService struct {
 	Repo *repository.AccomodationRepository
 }
 
-func (service *AccomodationService) CreateAccomodation(accomodation *model.Accomodation) error {
-
-	err := service.Repo.CreateAccomodation(accomodation)
-	if err != nil {
-		return err
+func NewAccomodationService(repo *repository.AccomodationRepository) *AccomodationService {
+	return &AccomodationService{
+		Repo: repo,
 	}
-	return nil
+}
+
+func (service *AccomodationService) CreateAccomodation(accomodation model.Accomodation) (model.RequestMessage, error) {
+
+	response := model.RequestMessage{
+		Message: service.Repo.CreateAccomodation(accomodation).Message,
+	}
+
+	return response, nil
 }

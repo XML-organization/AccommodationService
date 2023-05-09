@@ -1,13 +1,34 @@
-FROM golang:1.15-alpine3.13
-WORKDIR app
-RUN apk update \
-    && apk add sqlite \
-    && apk add socat \
-    && apk add build-base
-COPY go.mod .
-COPY go.sum .
+# Start from the latest golang base image
+FROM golang:latest as builder
+
+# Set the Current Working Directory inside the container
+WORKDIR /app
+
+# Copy go mod and sum files
+COPY ./AccomodationService/go.mod ./AccomodationService/go.sum ./
+
+# Copy the local dependency
+COPY ../common ../common
+
+# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
 RUN go mod download
-COPY . .
-RUN go build -o accomodation-service
-EXPOSE 8081
-CMD ["./accomodation-service"]
+
+# Copy everything from the current directory to the Working Directory inside the container
+COPY ./AccomodationService/ .
+
+# Build the Go app
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+
+######## Start a new stage from scratch #######
+FROM alpine:latest
+
+WORKDIR /root/
+
+# Copy the Pre-built binary file from the previous stage
+COPY --from=builder /app/main .
+
+# Expose port 8000 to the outside world
+EXPOSE 8000
+
+# Command to run the executable
+CMD ["./main"]

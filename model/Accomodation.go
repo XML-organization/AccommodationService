@@ -24,3 +24,7 @@ func (accomodation *Accomodation) BeforeCreate(scope *gorm.DB) error {
 	accomodation.ID = uuid.New()
 	return nil
 }
+
+type RequestMessage struct {
+	Message string `json:"message"`
+}
