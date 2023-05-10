@@ -89,7 +89,7 @@ func (server *Server) startGrpcServer(accomodationHandler *handler.AccomodationH
 		log.Fatalf("failed to listen: %v", err)
 	}
 	grpcServer := grpc.NewServer()
-	accomodation.RegisterAccomodationServiceServer(grpcServer, accomodationHandler)
+	accomodation.RegisterAccommodationServiceServer(grpcServer, accomodationHandler)
 	if err := grpcServer.Serve(listener); err != nil {
 		log.Fatalf("failed to serve: %s", err)
 	}

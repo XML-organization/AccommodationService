@@ -8,7 +8,7 @@ import (
 )
 
 type AccomodationHandler struct {
-	pb.UnimplementedAccomodationServiceServer
+	pb.UnimplementedAccommodationServiceServer
 	Service *service.AccomodationService
 }
 
