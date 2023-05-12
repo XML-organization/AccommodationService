@@ -13,7 +13,7 @@ type AccomodationRepository struct {
 }
 
 func NewAccomodationRepository(db *gorm.DB) *AccomodationRepository {
-	err := db.AutoMigrate(&model.Accomodation{})
+	err := db.AutoMigrate(&model.Accomodation{}, &model.Availability{})
 	if err != nil {
 		return nil
 	}
@@ -23,10 +23,11 @@ func NewAccomodationRepository(db *gorm.DB) *AccomodationRepository {
 	}
 }
 
-func (repo *AccomodationRepository) CreateAccomodation(accomodation model.Accomodation) model.RequestMessage {
+func (repo *AccomodationRepository) CreateAccomodation(accomodation *model.Accomodation) model.RequestMessage {
 	dbResult := repo.DatabaseConnection.Save(accomodation)
 
 	if dbResult.Error != nil {
+		println(dbResult.Error.Error())
 		return model.RequestMessage{
 			Message: "An error occured, please try again!",
 		}
@@ -41,4 +42,46 @@ func (repo *AccomodationRepository) UpdateAccomodation(accomodationId uuid.UUID,
 	result := repo.DatabaseConnection.Model(&model.Accomodation{}).Where("id = ?", accomodationId).Update("name", name)
 	fmt.Println(result.RowsAffected)
 	return nil
+}
+
+func (repo *AccomodationRepository) CreateAvailability(availability model.Availability) model.RequestMessage {
+	dbResult := repo.DatabaseConnection.Save(availability)
+
+	if dbResult.Error != nil {
+		println(dbResult.Error)
+		return model.RequestMessage{
+			Message: "An error occurred, please try again!",
+		}
+	}
+
+	return model.RequestMessage{
+		Message: "Success!",
+	}
+}
+
+func (repo *AccomodationRepository) UpdateAvailability(availability model.Availability) error {
+	result := repo.DatabaseConnection.Model(&model.Availability{}).Where("id = ?", availability.ID).Updates(map[string]interface{}{
+		"start_date": availability.StartDate,
+		"end_date":   availability.EndDate,
+	})
+	fmt.Println(result.RowsAffected)
+	return nil
+}
+
+func (repo *AccomodationRepository) GetAllAvailabilityByIDAccomodation(availabilityID uuid.UUID) ([]model.Availability, error) {
+	availabilities := []model.Availability{}
+	result := repo.DatabaseConnection.Where("id_accomodation = ?", availabilityID).Find(&availabilities)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return availabilities, nil
+}
+
+func (repo *AccomodationRepository) GetAllAccomodationByIDHost(hostID uuid.UUID) ([]model.Accomodation, error) {
+	accomodations := []model.Accomodation{}
+	result := repo.DatabaseConnection.Where("id_host = ?", hostID).Find(&accomodations)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return accomodations, nil
 }
