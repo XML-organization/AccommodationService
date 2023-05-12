@@ -68,18 +68,18 @@ func (repo *AccomodationRepository) UpdateAvailability(availability model.Availa
 	return nil
 }
 
-<<<<<<< HEAD
 func (repo *AccomodationRepository) FindByID(id uuid.UUID) (model.Accomodation, error) {
 	accomodation := model.Accomodation{}
 
-	dbResult := repo.Database.First(&accomodation, "id = ?", id)
+	dbResult := repo.DatabaseConnection.First(&accomodation, "id = ?", id)
 
 	if dbResult != nil {
 		return accomodation, dbResult.Error
 	}
 
 	return accomodation, nil
-=======
+}
+
 func (repo *AccomodationRepository) GetAllAvailabilityByIDAccomodation(availabilityID uuid.UUID) ([]model.Availability, error) {
 	availabilities := []model.Availability{}
 	result := repo.DatabaseConnection.Where("id_accomodation = ?", availabilityID).Find(&availabilities)
@@ -96,5 +96,4 @@ func (repo *AccomodationRepository) GetAllAccomodationByIDHost(hostID uuid.UUID)
 		return nil, result.Error
 	}
 	return accomodations, nil
->>>>>>> feature_create-accomodation
 }
