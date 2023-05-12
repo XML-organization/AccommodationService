@@ -23,3 +23,15 @@ func (repo *AccomodationRepository) UpdateAccomodation(accomodationId uuid.UUID,
 	fmt.Println(result.RowsAffected)
 	return nil
 }
+
+func (repo *AccomodationRepository) FindByID(id uuid.UUID) (model.Accomodation, error) {
+	accomodation := model.Accomodation{}
+
+	dbResult := repo.Database.First(&accomodation, "id = ?", id)
+
+	if dbResult != nil {
+		return accomodation, dbResult.Error
+	}
+
+	return accomodation, nil
+}
