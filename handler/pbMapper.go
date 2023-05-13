@@ -2,6 +2,7 @@ package handler
 
 import (
 	"accomodation-service/model"
+	"fmt"
 	"strconv"
 
 	pb "github.com/XML-organization/common/proto/accomodation_service"
@@ -77,7 +78,12 @@ func mapAccomodationFromCreateAccomodation(accomodation *pb.CreateRequest) model
 
 func mapSlotFromUpdateAvailability(slot *pb.UpdateAvailabilityRequest) model.Availability {
 
-	accomodationID, err := uuid.Parse(slot.IDAccomodation)
+	accomodationID, err := uuid.Parse(slot.AccomodationId)
+	if err != nil {
+		panic(err)
+	}
+
+	price, err := strconv.ParseFloat(slot.Price, 64)
 	if err != nil {
 		panic(err)
 	}
@@ -86,6 +92,7 @@ func mapSlotFromUpdateAvailability(slot *pb.UpdateAvailabilityRequest) model.Ava
 		StartDate:      slot.StartDate,
 		EndDate:        slot.EndDate,
 		IdAccomodation: accomodationID,
+		Price:          price,
 	}
 }
 
@@ -106,4 +113,15 @@ func mapAccomodation(accomodation *model.Accomodation) *pb.Accomodation {
 		PricePerGuest: accomodation.PricePerGuest,
 	}
 	return accomodationPb
+}
+
+func mapAvailability(availability *model.Availability) *pb.Availability {
+	availabilityPb := &pb.Availability{
+		Id:             availability.ID.String(),
+		StartDate:      availability.StartDate,
+		EndDate:        availability.EndDate,
+		IdAccomodation: availability.IdAccomodation.String(),
+		Price:          fmt.Sprintf("%.2f", availability.Price),
+	}
+	return availabilityPb
 }

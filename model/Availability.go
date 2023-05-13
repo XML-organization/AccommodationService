@@ -7,9 +7,10 @@ import (
 
 type Availability struct {
 	ID             uuid.UUID `json:"id"`
-	StartDate      string    `json:"startDate" gorm:"not null;type:string"`
-	EndDate        string    `json:"endDate" gorm:"not null;type:string"`
+	StartDate      string    `json:"start_date"`
+	EndDate        string    `json:"end_date" `
 	IdAccomodation uuid.UUID `json:"id_accomodation"`
+	Price          float64   `json:"price"`
 }
 
 func (availability *Availability) BeforeCreate(scope *gorm.DB) error {
