@@ -66,19 +66,17 @@ func (handler *AccomodationHandler) GetAllAccomodations(ctx context.Context, req
 
 func (handler *AccomodationHandler) GetAutoApprovalForAccommodation(ctx context.Context, in *pb.AutoApprovalRequest) (*pb.AutoApprovalResponse, error) {
 
+	println("U METODU GetAutoApprovalForAccommodation STIGAO:", in.AccommodationId)
 	accomodationID, err := uuid.Parse(in.AccommodationId)
 	if err != nil {
+		println("ISPARSIRAO ID OVAKO: ", accomodationID.String())
 		panic(err)
 	}
 	accommodation, err := handler.Service.Repo.FindByID(accomodationID)
-	if err != nil {
-		return &pb.AutoApprovalResponse{
-			AutoApproval: accommodation.AutoApproval,
-		}, err
-	}
+	println("IZ BAZE DOBAOVIO OVAJ APPROVAL: ", accommodation.AutoApproval, "I OVAJ ID", accommodation.ID.String())
 
 	return &pb.AutoApprovalResponse{
-		AutoApproval: false,
+		AutoApproval: accommodation.AutoApproval,
 	}, err
 }
 
