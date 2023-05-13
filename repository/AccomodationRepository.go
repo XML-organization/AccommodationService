@@ -44,7 +44,7 @@ func (repo *AccomodationRepository) UpdateAccomodation(accomodationId uuid.UUID,
 	return nil
 }
 
-func (repo *AccomodationRepository) CreateAvailability(availability model.Availability) model.RequestMessage {
+func (repo *AccomodationRepository) CreateAvailability(availability *model.Availability) model.RequestMessage {
 	dbResult := repo.DatabaseConnection.Save(availability)
 
 	if dbResult.Error != nil {
@@ -59,11 +59,8 @@ func (repo *AccomodationRepository) CreateAvailability(availability model.Availa
 	}
 }
 
-func (repo *AccomodationRepository) UpdateAvailability(availability model.Availability) error {
-	result := repo.DatabaseConnection.Model(&model.Availability{}).Where("id = ?", availability.ID).Updates(map[string]interface{}{
-		"start_date": availability.StartDate,
-		"end_date":   availability.EndDate,
-	})
+func (repo *AccomodationRepository) UpdateAvailability(availability *model.Availability) error {
+	result := repo.DatabaseConnection.Model(availability).Updates(availability)
 	fmt.Println(result.RowsAffected)
 	return nil
 }
@@ -84,4 +81,12 @@ func (repo *AccomodationRepository) GetAllAccomodationByIDHost(hostID uuid.UUID)
 		return nil, result.Error
 	}
 	return accomodations, nil
+}
+
+func (repo *AccomodationRepository) DeleteAvailability(availabilityID uuid.UUID) error {
+	result := repo.DatabaseConnection.Delete(&model.Availability{}, availabilityID)
+	if result.Error != nil {
+		return result.Error
+	}
+	return nil
 }

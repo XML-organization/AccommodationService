@@ -3,6 +3,7 @@ package service
 import (
 	"accomodation-service/model"
 	"accomodation-service/repository"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -32,40 +33,89 @@ func (service *AccomodationService) CreateAccomodation(accomodation *model.Accom
 	return response, nil
 }
 
-func (service *AccomodationService) AddOrUpdateAvailability(availability model.Availability) (model.RequestMessage, error) {
+func (service *AccomodationService) AddOrUpdateAvailability(availability *model.Availability) (model.RequestMessage, error) {
 	existingAvailabilities, err := service.Repo.GetAllAvailabilityByIDAccomodation(availability.IdAccomodation)
 	if err != nil {
 		return model.RequestMessage{}, err
 	}
-	startDate, s1 := time.Parse("2006-01-02", availability.StartDate)
 
-	endDate, e1 := time.Parse("2006-01-02", availability.EndDate)
+	startDate, err := time.Parse("2006-01-02", availability.StartDate)
+	if err != nil {
+		return model.RequestMessage{}, err
+	}
+
+	endDate, err := time.Parse("2006-01-02", availability.EndDate)
+	if err != nil {
+		return model.RequestMessage{}, err
+	}
+
+	fmt.Println("novo vreme pocetak: " + availability.StartDate)
+	fmt.Println("novo vreme kraj: " + availability.EndDate)
 
 	for _, existingAvailability := range existingAvailabilities {
-		EAstartDate, s2 := time.Parse("2006-01-02", existingAvailability.StartDate)
+		EAstartDate, err := time.Parse("2006-01-02", existingAvailability.StartDate)
+		if err != nil {
+			return model.RequestMessage{}, err
+		}
 
-		EAendDate, e2 := time.Parse("2006-01-02", existingAvailability.EndDate)
+		EAendDate, err := time.Parse("2006-01-02", existingAvailability.EndDate)
+		if err != nil {
+			return model.RequestMessage{}, err
+		}
 
 		// Provera preklapanja sa postojećim dostupnim terminom
-		if isTimeOverlap(existingAvailability, availability) {
+		if startDate.Before(EAendDate) && EAstartDate.Before(endDate) {
 			// Postoji preklapanje vremena
-			if s1 != nil && s2 != nil && e1 != nil && e2 != nil {
-				if EAstartDate.Before(startDate) {
-					// Preklapanje se događa na početku postojećeg termina
-					EAendDate = startDate
-				} else if EAendDate.After(endDate) {
-					// Preklapanje se događa na kraju postojećeg termina
-					EAstartDate = endDate
+			fmt.Println("preklapa se")
+			if EAstartDate.Before(startDate) && EAendDate.Before(endDate) {
+				// Preklapanje: početak postojećeg termina je pre početka novog termina, a kraj postojećeg termina je pre kraja novog termina
+				EAendDate = startDate
+				existingAvailability.EndDate = EAendDate.Format("2006-01-02")
+			} else if EAstartDate.After(startDate) && EAendDate.After(endDate) {
+				// Preklapanje: početak postojećeg termina je posle početka novog termina, a kraj postojećeg termina je posle kraja novog termina
+				EAstartDate = endDate
+				existingAvailability.StartDate = EAstartDate.Format("2006-01-02")
+			} else if EAstartDate.After(startDate) && EAendDate.Before(endDate) {
+				// Preklapanje: početak postojećeg termina je posle početka novog termina, a kraj postojećeg termina je pre kraja novog termina
+				// Obrisi postojeci termin
+				err = service.Repo.DeleteAvailability(existingAvailability.ID)
+				if err != nil {
+					return model.RequestMessage{}, err
+				}
+			} else if EAstartDate.Before(startDate) && EAendDate.After(endDate) {
+				// Preklapanje: početak postojećeg termina je pre početka novog termina, a kraj postojećeg termina je posle kraja novog termina
+				// Podeli postojeci termin na dva dela
+				newAvailability1 := model.Availability{
+					StartDate: existingAvailability.StartDate,
+					EndDate:   availability.StartDate,
+					// Ostali atributi preuzeti iz existingAvailability
+				}
+				newAvailability2 := model.Availability{
+					StartDate: availability.EndDate,
+					EndDate:   existingAvailability.EndDate,
+					// Ostali atributi preuzeti iz existingAvailability
 				}
 
-				// Sačuvaj promene u repozitorijumu
-				err = service.Repo.UpdateAvailability(existingAvailability)
+				// Sacuvaj nove termine u repozitorijumu
+				service.Repo.CreateAvailability(&newAvailability1)
+
+				service.Repo.CreateAvailability(&newAvailability2)
+
+				// Obrisi postojeci termin
+				err = service.Repo.DeleteAvailability(existingAvailability.ID)
 				if err != nil {
-					// Greška pri ažuriranju postojećeg dostupnog termina
 					return model.RequestMessage{}, err
 				}
 			}
+
+			// Sačuvaj promene u repozitorijumu
+			err = service.Repo.UpdateAvailability(&existingAvailability)
+			if err != nil {
+				// Greška pri ažuriranju postojećeg dostupnog termina
+				return model.RequestMessage{}, err
+			}
 		}
+
 	}
 
 	response := model.RequestMessage{
@@ -75,23 +125,18 @@ func (service *AccomodationService) AddOrUpdateAvailability(availability model.A
 	return response, nil
 }
 
-// Pomoćna funkcija za proveru preklapanja vremena
-func isTimeOverlap(availability1, availability2 model.Availability) bool {
-	startDate1, s1 := time.Parse("2006-01-02", availability1.StartDate)
-	endDate1, e1 := time.Parse("2006-01-02", availability1.EndDate)
-	startDate2, s2 := time.Parse("2006-01-02", availability2.StartDate)
-	endDate2, e2 := time.Parse("2006-01-02", availability2.EndDate)
-	if s1 != nil && s2 != nil && e1 != nil && e2 != nil {
-		return startDate1.Before(endDate2) && startDate2.Before(endDate1)
-	} else {
-		return false
-	}
-}
-
 func (service *AccomodationService) GetAllAccomodationsByIDHost(hostID uuid.UUID) ([]model.Accomodation, error) {
 	accomodations, err := service.Repo.GetAllAccomodationByIDHost(hostID)
 	if err != nil {
 		return nil, err
 	}
 	return accomodations, nil
+}
+
+func (service *AccomodationService) GetAllAvailabilitiesByAccomodationID(accomodationID uuid.UUID) ([]model.Availability, error) {
+	availabilities, err := service.Repo.GetAllAvailabilityByIDAccomodation(accomodationID)
+	if err != nil {
+		return nil, err
+	}
+	return availabilities, nil
 }

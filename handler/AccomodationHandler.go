@@ -31,7 +31,7 @@ func (handler *AccomodationHandler) Create(ctx context.Context, request *pb.Crea
 
 func (handler *AccomodationHandler) UpdateAvailability(ctx context.Context, request *pb.UpdateAvailabilityRequest) (*pb.UpdateAvailabilityResponse, error) {
 	slot := mapSlotFromUpdateAvailability(request)
-	message, err := handler.Service.AddOrUpdateAvailability(slot)
+	message, err := handler.Service.AddOrUpdateAvailability(&slot)
 	response := pb.UpdateAvailabilityResponse{
 		Message: message.Message,
 	}
@@ -56,6 +56,27 @@ func (handler *AccomodationHandler) GetAllAccomodations(ctx context.Context, req
 	for _, accomodation := range accommodations {
 		current := mapAccomodation(&accomodation)
 		response.Accomodations = append(response.Accomodations, current)
+	}
+	return response, nil
+}
+
+func (handler *AccomodationHandler) GetAllAvailability(ctx context.Context, request *pb.GetAllAvailabilityRequest) (*pb.GetAllAvailabilityResponse, error) {
+	accomodationID, err := uuid.Parse(request.AccomodationId)
+	if err != nil {
+		return nil, err
+	}
+
+	availabilities, err := handler.Service.GetAllAvailabilitiesByAccomodationID(accomodationID)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &pb.GetAllAvailabilityResponse{
+		Availabilities: []*pb.Availability{},
+	}
+	for _, availability := range availabilities {
+		current := mapAvailability(&availability)
+		response.Availabilities = append(response.Availabilities, current)
 	}
 	return response, nil
 }
