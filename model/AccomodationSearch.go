@@ -1,8 +1,10 @@
 package model
 
+import "time"
+
 type AccomodationSearch struct {
-	Location    string `json:"location"`
-	StartDate   string `json:"startDate"`
-	EndDate     string `json:"endDate"`
-	NumOfGuests int    `json:"numOfGuests"`
+	Location    string    `json:"location"`
+	StartDate   time.Time `json:"startDate"`
+	EndDate     time.Time `json:"endDate"`
+	NumOfGuests int       `json:"numOfGuests"`
 }

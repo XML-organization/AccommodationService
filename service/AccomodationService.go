@@ -140,3 +140,13 @@ func (service *AccomodationService) GetAllAvailabilitiesByAccomodationID(accomod
 	}
 	return availabilities, nil
 }
+
+func (service *AccomodationService) FindByLocationAndNumOfGuests(location string, numOfGuests int) ([]model.Accomodation, model.RequestMessage) {
+	accommodations, err := service.Repo.FindByLocationAndNumOfGuests(location, numOfGuests)
+	if err.Message != "Success!" {
+		return nil, model.RequestMessage{
+			Message: "An error occurred, please try again!",
+		}
+	}
+	return accommodations, err
+}

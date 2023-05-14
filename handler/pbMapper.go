@@ -4,6 +4,7 @@ import (
 	"accomodation-service/model"
 	"fmt"
 	"strconv"
+	"time"
 
 	pb "github.com/XML-organization/common/proto/accomodation_service"
 	"github.com/google/uuid"
@@ -115,6 +116,46 @@ func mapAccomodation(accomodation *model.Accomodation) *pb.Accomodation {
 	return accomodationPb
 }
 
+func mapAccomodationOnAccommodationDTO(accomodation *model.Accomodation, totalPrice int) *model.AccomodationDTO {
+	accomodationDTO := &model.AccomodationDTO{
+		ID:            accomodation.ID,
+		Name:          accomodation.Name,
+		Location:      accomodation.Location,
+		Wifi:          accomodation.Wifi,
+		Kitchen:       accomodation.Kitchen,
+		AirCondition:  accomodation.AirCondition,
+		FreeParking:   accomodation.FreeParking,
+		AutoApproval:  accomodation.AutoApproval,
+		Photos:        accomodation.Photos,
+		MinGuests:     accomodation.MinGuests,
+		MaxGuests:     accomodation.MaxGuests,
+		IDHost:        accomodation.IDHost,
+		PricePerGuest: accomodation.PricePerGuest,
+		TotalPrice:    totalPrice,
+	}
+	return accomodationDTO
+}
+
+func mapAccomodationDTOToAccommodationSearchResponse(accomodation *model.AccomodationDTO) *pb.AccomodationDTO {
+	accomodationPb := &pb.AccomodationDTO{
+		Id:            accomodation.ID.String(),
+		Name:          accomodation.Name,
+		Location:      accomodation.Location,
+		Wifi:          accomodation.Wifi,
+		Kitchen:       accomodation.Kitchen,
+		AirCondition:  accomodation.AirCondition,
+		FreeParking:   accomodation.FreeParking,
+		AutoApproval:  accomodation.AutoApproval,
+		Photos:        accomodation.Photos,
+		MinGuests:     strconv.Itoa(accomodation.MinGuests),
+		MaxGuests:     strconv.Itoa(accomodation.MaxGuests),
+		IdHost:        accomodation.IDHost.String(),
+		PricePerGuest: accomodation.PricePerGuest,
+		TotalPrice:    strconv.Itoa(accomodation.TotalPrice),
+	}
+	return accomodationPb
+}
+
 func mapAvailability(availability *model.Availability) *pb.Availability {
 	availabilityPb := &pb.Availability{
 		Id:             availability.ID.String(),
@@ -124,4 +165,44 @@ func mapAvailability(availability *model.Availability) *pb.Availability {
 		Price:          fmt.Sprintf("%.2f", availability.Price),
 	}
 	return availabilityPb
+}
+
+func mapAccomodationSearchFromSearchRequest(search *pb.SearchRequest) model.AccomodationSearch {
+
+	num, err := strconv.Atoi(search.NumOfGuests)
+	if err != nil {
+		panic(err)
+	}
+
+	layout := "2006-01-02"
+
+	startDate, err := time.Parse(layout, search.StartDate)
+	if err != nil {
+		panic(err)
+	}
+
+	endDate, err := time.Parse(layout, search.EndDate)
+	if err != nil {
+		panic(err)
+	}
+
+	return model.AccomodationSearch{
+		Location:    search.Location,
+		StartDate:   startDate,
+		EndDate:     endDate,
+		NumOfGuests: num,
+	}
+}
+
+func mapAccomodationSearchToSearchRequest(accomodationSearch *model.AccomodationSearch) *pb.SearchRequest {
+	guestNumber := strconv.Itoa(accomodationSearch.NumOfGuests)
+	startDate := accomodationSearch.StartDate.Format("2006-01-02")
+	endDate := accomodationSearch.EndDate.Format("2006-01-02")
+
+	return &pb.SearchRequest{
+		Location:    accomodationSearch.Location,
+		StartDate:   startDate,
+		EndDate:     endDate,
+		NumOfGuests: guestNumber,
+	}
 }

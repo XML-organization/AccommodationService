@@ -4,12 +4,15 @@ import (
 	"accomodation-service/model"
 	"accomodation-service/service"
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
+	"log"
+	"time"
 
 	pb "github.com/XML-organization/common/proto/accomodation_service"
+	bookingServicepb "github.com/XML-organization/common/proto/booking_service"
 	"github.com/google/uuid"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type AccomodationHandler struct {
@@ -80,23 +83,151 @@ func (handler *AccomodationHandler) GetAutoApprovalForAccommodation(ctx context.
 	}, err
 }
 
-func (handler *AccomodationHandler) SearchAccomodation(w http.ResponseWriter, r *http.Request) {
-	var accomodation model.AccomodationSearch
-	err := json.NewDecoder(r.Body).Decode(&accomodation)
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
+func (handler *AccomodationHandler) Search(ctx context.Context, request *pb.SearchRequest) (*pb.AccomodationSearchResponse, error) {
+
+	searchRequest := mapAccomodationSearchFromSearchRequest(request)
+
+	//Filtriranje prema lokaciji i broju gostiju
+	accommodations, requestMessage := handler.Service.FindByLocationAndNumOfGuests(searchRequest.Location, searchRequest.NumOfGuests)
+	if requestMessage.Message != "Success!" {
+		return nil, fmt.Errorf("an error occurred: %s", requestMessage.Message)
 	}
 
-	//pronadji sve na toj lokaciji
-	/*err = handler.Service.SearchAccByLocation(&accomodation.Location)
-	if err != nil {
-		fmt.Println(err)
-		w.WriteHeader(http.StatusExpectationFailed)
-		return
-	}*/
+	//Provjera dostupnosti objekta i cijene u vremenskom intervalu
 
+	availableAccommodations := []model.AccomodationDTO{}
+
+	for _, accommodation := range accommodations {
+
+		start := searchRequest.StartDate
+		end := searchRequest.EndDate
+		numOfDays := int(end.Sub(start).Hours() / 24)
+		totalPrice := 0
+
+		availabilities, err := handler.Service.GetAllAvailabilitiesByAccomodationID(accommodation.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, availability := range availabilities {
+
+			startDate, err := time.Parse("2006-01-02", availability.StartDate)
+			if err != nil {
+				fmt.Println("Error whiile parsing date:", err)
+				return nil, err
+			}
+
+			endDate, err := time.Parse("2006-01-02", availability.EndDate)
+			if err != nil {
+				fmt.Println("Error whiile parsing date:", err)
+				return nil, err
+			}
+
+			if !startDate.After(start) && start.Before(endDate) {
+
+				duration := endDate.Sub(start)
+				daysDiff := int(duration.Hours() / 24)
+
+				if daysDiff >= numOfDays {
+					if accommodation.PricePerGuest == true {
+						totalPrice = totalPrice + int(availability.Price)*numOfDays*searchRequest.NumOfGuests
+						availableAccommodations = append(availableAccommodations, *mapAccomodationOnAccommodationDTO(&accommodation, totalPrice))
+					} else {
+						totalPrice = totalPrice + int(availability.Price)*numOfDays
+						availableAccommodations = append(availableAccommodations, *mapAccomodationOnAccommodationDTO(&accommodation, totalPrice))
+					}
+				} else {
+					if accommodation.PricePerGuest == true {
+						totalPrice = totalPrice + int(availability.Price)*daysDiff*searchRequest.NumOfGuests
+						numOfDays = numOfDays - daysDiff
+						start = endDate
+					} else {
+						totalPrice = totalPrice + int(availability.Price)*daysDiff
+						numOfDays = numOfDays - daysDiff
+						start = endDate
+					}
+				}
+
+			} else {
+				continue
+			}
+		}
+
+	}
+
+	//rpc GetAllBookings
+	conn, err := grpc.Dial("booking-service:8000", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+
+	bookingService := bookingServicepb.NewBookingServiceClient(conn)
+
+	bookings, err := bookingService.GetAll(context.TODO(), &bookingServicepb.EmptyRequst{})
+	if err != nil {
+		println(err.Error())
+		return nil, err
+	}
+
+	//Provjera da li je smjestaj vec rezervisan u navedenom periodu
+
+	for _, accomodation := range availableAccommodations {
+		println("------------BOOKINGS----------")
+		for _, booking := range bookings.Bookings {
+			println(booking.Status)
+			println(booking.Id)
+
+			if booking.Status == "CONFIRMED" && booking.AccomodationID == accomodation.ID.String() {
+
+				startDate, err := time.Parse("2006-01-02", booking.StartDate)
+				if err != nil {
+					fmt.Println("Error whiile parsing date:", err)
+					return nil, err
+				}
+
+				endDate, err := time.Parse("2006-01-02", booking.EndDate)
+				if err != nil {
+					fmt.Println("Error whiile parsing date:", err)
+					return nil, err
+				}
+				println("POZVAO RANGESOVERLAP ZA", startDate.String(), endDate.String(), searchRequest.StartDate.String(), searchRequest.EndDate.String())
+				if rangesOverlap(startDate, endDate, searchRequest.StartDate, searchRequest.EndDate) {
+					//izbaci smjestaj iz liste dostupnih
+					println("ovi datumi se preklapaju ", startDate.String(), endDate.String(), searchRequest.StartDate.String(), searchRequest.EndDate.String())
+					removeAccommodationFromList(&availableAccommodations, &accomodation)
+				}
+			}
+		}
+	}
+
+	response := pb.AccomodationSearchResponse{
+		AccommodationsDTO: []*pb.AccomodationDTO{},
+	}
+
+	for _, accommodation := range availableAccommodations {
+		proto := mapAccomodationDTOToAccommodationSearchResponse(&accommodation)
+		response.AccommodationsDTO = append(response.AccommodationsDTO, proto)
+	}
+
+	return &response, nil
+
+}
+
+func rangesOverlap(start1, end1, start2, end2 time.Time) bool {
+	return !(end1.Before(start2) || end2.Before(start1) || start1.Equal(end2) || start2.Equal(end1))
+}
+
+func removeAccommodationFromList(accommodations *[]model.AccomodationDTO, accommodation *model.AccomodationDTO) {
+	println("pozvao sam metodu ukloni smjestaj iz liste dostupnih")
+	for i, acc := range *accommodations {
+		if acc.ID == accommodation.ID {
+			// Pronađen objekat, uklanjanje iz liste
+			println("OBRISAO")
+			*accommodations = append((*accommodations)[:i], (*accommodations)[i+1:]...)
+			break
+		}
+	}
 }
 
 func (handler *AccomodationHandler) GetAllAvailability(ctx context.Context, request *pb.GetAllAvailabilityRequest) (*pb.GetAllAvailabilityResponse, error) {

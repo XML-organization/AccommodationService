@@ -102,3 +102,18 @@ func (repo *AccomodationRepository) DeleteAvailability(availabilityID uuid.UUID)
 	}
 	return nil
 }
+
+func (repo *AccomodationRepository) FindByLocationAndNumOfGuests(location string, numOfGuests int) ([]model.Accomodation, model.RequestMessage) {
+	var accommodations []model.Accomodation
+	dbResult := repo.DatabaseConnection.Where("location = ? AND accomodations.min_guests <= ? AND accomodations.max_guests >= ?", location, numOfGuests, numOfGuests).Find(&accommodations)
+
+	if dbResult.Error != nil {
+		return nil, model.RequestMessage{
+			Message: "An error occurred, please try again!",
+		}
+	}
+
+	return accommodations, model.RequestMessage{
+		Message: "Success!",
+	}
+}
