@@ -117,3 +117,19 @@ func (repo *AccomodationRepository) FindByLocationAndNumOfGuests(location string
 		Message: "Success!",
 	}
 }
+
+func (repo *AccomodationRepository) FindAllByHostId(id string) []string {
+	var accommodations []model.Accomodation
+	dbResult := repo.DatabaseConnection.Where("id_host = ?", id).Find(&accommodations)
+
+	if dbResult.Error != nil {
+		return []string{}
+	}
+
+	var accommodationIDs []string
+	for _, accommodation := range accommodations {
+		accommodationIDs = append(accommodationIDs, accommodation.ID.String())
+	}
+
+	return accommodationIDs
+}

@@ -18,7 +18,7 @@ type Accomodation struct {
 	Photos        []byte    `json:"photos"`
 	MinGuests     int       `json:"minGuests"`
 	MaxGuests     int       `json:"maxGuests"`
-	IDHost        uuid.UUID `json:"id_host"`
+	IDHost        uuid.UUID `gorm:"column:id_host" json:"idHost"`
 }
 
 func (accomodation *Accomodation) BeforeCreate(scope *gorm.DB) error {

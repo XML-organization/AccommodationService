@@ -20,6 +20,10 @@ func NewAccomodationService(repo *repository.AccomodationRepository) *Accomodati
 	}
 }
 
+func (service *AccomodationService) FindAllAccomodationIDsByHostId(id string) []string {
+	return service.Repo.FindAllByHostId(id)
+}
+
 func (service *AccomodationService) CreateAccomodation(accomodation *model.Accomodation) (model.RequestMessage, error) {
 	println("acc servis")
 	println(strconv.FormatBool(accomodation.AutoApproval))
@@ -149,4 +153,16 @@ func (service *AccomodationService) FindByLocationAndNumOfGuests(location string
 		}
 	}
 	return accommodations, err
+}
+
+func (service *AccomodationService) FindByID(id uuid.UUID) (model.Accomodation, model.RequestMessage) {
+	accommodations, err := service.Repo.FindByID(id)
+	if err != nil {
+		return model.Accomodation{}, model.RequestMessage{
+			Message: "Accomodation not found!",
+		}
+	}
+	return accommodations, model.RequestMessage{
+		Message: "Successfully!",
+	}
 }

@@ -4,8 +4,6 @@ go 1.20
 
 replace github.com/XML-organization/common => ../common
 
-replace github.com/XML-organization/common => ../common
-
 require (
 	github.com/XML-organization/common v0.0.0-00010101000000-000000000000
 	github.com/google/uuid v1.3.0

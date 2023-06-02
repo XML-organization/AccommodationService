@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	pb "github.com/XML-organization/common/proto/accomodation_service"
@@ -24,6 +25,29 @@ func NewAccomodationHandler(service *service.AccomodationService) *AccomodationH
 	return &AccomodationHandler{
 		Service: service,
 	}
+}
+
+func (handler *AccomodationHandler) GetAllAccomodationIdsByHostId(ctx context.Context, request *pb.GetAllAccomodationIdsByHostIdRequest) (*pb.GetAllAccomodationIdsByHostIdResponse, error) {
+	println("//////////////")
+	println(request.HostId)
+	idHost := strings.Trim(request.HostId, "| ")
+	println(idHost)
+	return &pb.GetAllAccomodationIdsByHostIdResponse{
+		AccomodationIds: handler.Service.FindAllAccomodationIDsByHostId(idHost),
+	}, nil
+}
+
+func (handler *AccomodationHandler) GetOneAccomodation(ctx context.Context, request *pb.GetOneAccomodationRequest) (*pb.GetOneAccomodationResponse, error) {
+	accomodationID, err := uuid.Parse(request.AccomodationId)
+	if err != nil {
+		return &pb.GetOneAccomodationResponse{}, err
+	}
+
+	accomodation, _ := handler.Service.FindByID(accomodationID)
+
+	return &pb.GetOneAccomodationResponse{
+		Accomodation: mapAccomodation(&accomodation),
+	}, nil
 }
 
 func (handler *AccomodationHandler) Create(ctx context.Context, request *pb.CreateRequest) (*pb.CreateResponse, error) {
