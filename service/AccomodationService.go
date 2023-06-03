@@ -21,6 +21,7 @@ func NewAccomodationService(repo *repository.AccomodationRepository) *Accomodati
 }
 
 func (service *AccomodationService) FindAllAccomodationIDsByHostId(id string) []string {
+
 	return service.Repo.FindAllByHostId(id)
 }
 

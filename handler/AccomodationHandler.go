@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	pb "github.com/XML-organization/common/proto/accomodation_service"
@@ -27,14 +26,32 @@ func NewAccomodationHandler(service *service.AccomodationService) *AccomodationH
 	}
 }
 
-func (handler *AccomodationHandler) GetAllAccomodationIdsByHostId(ctx context.Context, request *pb.GetAllAccomodationIdsByHostIdRequest) (*pb.GetAllAccomodationIdsByHostIdResponse, error) {
-	println("//////////////")
-	println(request.HostId)
-	idHost := strings.Trim(request.HostId, "| ")
-	println(idHost)
-	return &pb.GetAllAccomodationIdsByHostIdResponse{
-		AccomodationIds: handler.Service.FindAllAccomodationIDsByHostId(idHost),
-	}, nil
+func (handler *AccomodationHandler) CheckIfGuestHasReservationInPast(ctx context.Context, request *pb.CheckIfGuestHasReservationInPastRequest) (*pb.CheckIfGuestHasReservationInPastResponse, error) {
+
+	ids := handler.Service.FindAllAccomodationIDsByHostId(request.HostId)
+
+	conn, err := grpc.Dial("booking-service:8000", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+
+	bookingService := bookingServicepb.NewBookingServiceClient(conn)
+
+	println(ids[0])
+
+	hasResevation, err := bookingService.GuestHasReservationInPast(context.TODO(), &bookingServicepb.GuestHasReservationInPastRequest{AccomodationsId: ids, GuestId: request.GuestId})
+	if err != nil {
+		println(err.Error())
+		return nil, err
+	}
+
+	retValue := false
+	if hasResevation.Message == "Have" {
+		retValue = true
+	}
+
+	return &pb.CheckIfGuestHasReservationInPastResponse{HasReservation: retValue}, nil
 }
 
 func (handler *AccomodationHandler) GetOneAccomodation(ctx context.Context, request *pb.GetOneAccomodationRequest) (*pb.GetOneAccomodationResponse, error) {
