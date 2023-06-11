@@ -3,6 +3,7 @@ package repository
 import (
 	"accomodation-service/model"
 	"fmt"
+	"log"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -15,6 +16,7 @@ type AccomodationRepository struct {
 func NewAccomodationRepository(db *gorm.DB) *AccomodationRepository {
 	err := db.AutoMigrate(&model.Accomodation{}, &model.Availability{})
 	if err != nil {
+		log.Println(err)
 		return nil
 	}
 
@@ -27,6 +29,7 @@ func (repo *AccomodationRepository) CreateAccomodation(accomodation *model.Accom
 	dbResult := repo.DatabaseConnection.Save(accomodation)
 
 	if dbResult.Error != nil {
+		log.Println(dbResult.Error)
 		println(dbResult.Error.Error())
 		return model.RequestMessage{
 			Message: "An error occured, please try again!",
@@ -40,6 +43,7 @@ func (repo *AccomodationRepository) CreateAccomodation(accomodation *model.Accom
 
 func (repo *AccomodationRepository) UpdateAccomodation(accomodationId uuid.UUID, name string) error {
 	result := repo.DatabaseConnection.Model(&model.Accomodation{}).Where("id = ?", accomodationId).Update("name", name)
+	log.Println(result.RowsAffected)
 	fmt.Println(result.RowsAffected)
 	return nil
 }
@@ -48,6 +52,7 @@ func (repo *AccomodationRepository) CreateAvailability(availability *model.Avail
 	dbResult := repo.DatabaseConnection.Save(availability)
 
 	if dbResult.Error != nil {
+		log.Println(dbResult.Error)
 		println(dbResult.Error)
 		return model.RequestMessage{
 			Message: "An error occurred, please try again!",
@@ -61,7 +66,7 @@ func (repo *AccomodationRepository) CreateAvailability(availability *model.Avail
 
 func (repo *AccomodationRepository) UpdateAvailability(availability *model.Availability) error {
 	result := repo.DatabaseConnection.Model(availability).Updates(availability)
-	fmt.Println(result.RowsAffected)
+	log.Println(result.RowsAffected)
 	return nil
 }
 
@@ -71,6 +76,7 @@ func (repo *AccomodationRepository) FindByID(id uuid.UUID) (model.Accomodation, 
 	dbResult := repo.DatabaseConnection.First(&accomodation, "id = ?", id)
 
 	if dbResult != nil {
+		log.Println(dbResult.Error)
 		return accomodation, dbResult.Error
 	}
 
@@ -81,6 +87,7 @@ func (repo *AccomodationRepository) GetAllAvailabilityByIDAccomodation(availabil
 	availabilities := []model.Availability{}
 	result := repo.DatabaseConnection.Where("id_accomodation = ?", availabilityID).Find(&availabilities)
 	if result.Error != nil {
+		log.Println(result.Error)
 		return nil, result.Error
 	}
 	return availabilities, nil
@@ -90,6 +97,7 @@ func (repo *AccomodationRepository) GetAllAccomodationByIDHost(hostID uuid.UUID)
 	accomodations := []model.Accomodation{}
 	result := repo.DatabaseConnection.Where("id_host = ?", hostID).Find(&accomodations)
 	if result.Error != nil {
+		log.Println(result.Error)
 		return nil, result.Error
 	}
 	return accomodations, nil
@@ -98,6 +106,7 @@ func (repo *AccomodationRepository) GetAllAccomodationByIDHost(hostID uuid.UUID)
 func (repo *AccomodationRepository) DeleteAvailability(availabilityID uuid.UUID) error {
 	result := repo.DatabaseConnection.Delete(&model.Availability{}, availabilityID)
 	if result.Error != nil {
+		log.Println(result.Error)
 		return result.Error
 	}
 	return nil
@@ -108,6 +117,7 @@ func (repo *AccomodationRepository) FindByLocationAndNumOfGuests(location string
 	dbResult := repo.DatabaseConnection.Where("location = ? AND accomodations.min_guests <= ? AND accomodations.max_guests >= ?", location, numOfGuests, numOfGuests).Find(&accommodations)
 
 	if dbResult.Error != nil {
+		log.Println(dbResult.Error)
 		return nil, model.RequestMessage{
 			Message: "An error occurred, please try again!",
 		}
@@ -123,6 +133,7 @@ func (repo *AccomodationRepository) FindAllByHostId(id string) []string {
 	dbResult := repo.DatabaseConnection.Where("id_host = ?", id).Find(&accommodations)
 
 	if dbResult.Error != nil {
+		log.Println(dbResult.Error)
 		return []string{}
 	}
 

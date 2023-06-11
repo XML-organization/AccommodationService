@@ -4,6 +4,7 @@ import (
 	"accomodation-service/model"
 	"accomodation-service/repository"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -41,16 +42,19 @@ func (service *AccomodationService) CreateAccomodation(accomodation *model.Accom
 func (service *AccomodationService) AddOrUpdateAvailability(availability *model.Availability) (model.RequestMessage, error) {
 	existingAvailabilities, err := service.Repo.GetAllAvailabilityByIDAccomodation(availability.IdAccomodation)
 	if err != nil {
+		log.Println(err)
 		return model.RequestMessage{}, err
 	}
 
 	startDate, err := time.Parse("2006-01-02", availability.StartDate)
 	if err != nil {
+		log.Println(err)
 		return model.RequestMessage{}, err
 	}
 
 	endDate, err := time.Parse("2006-01-02", availability.EndDate)
 	if err != nil {
+		log.Println(err)
 		return model.RequestMessage{}, err
 	}
 
@@ -60,11 +64,13 @@ func (service *AccomodationService) AddOrUpdateAvailability(availability *model.
 	for _, existingAvailability := range existingAvailabilities {
 		EAstartDate, err := time.Parse("2006-01-02", existingAvailability.StartDate)
 		if err != nil {
+			log.Println(err)
 			return model.RequestMessage{}, err
 		}
 
 		EAendDate, err := time.Parse("2006-01-02", existingAvailability.EndDate)
 		if err != nil {
+			log.Println(err)
 			return model.RequestMessage{}, err
 		}
 
@@ -85,6 +91,7 @@ func (service *AccomodationService) AddOrUpdateAvailability(availability *model.
 				// Obrisi postojeci termin
 				err = service.Repo.DeleteAvailability(existingAvailability.ID)
 				if err != nil {
+					log.Println(err)
 					return model.RequestMessage{}, err
 				}
 			} else if EAstartDate.Before(startDate) && EAendDate.After(endDate) {
@@ -109,6 +116,7 @@ func (service *AccomodationService) AddOrUpdateAvailability(availability *model.
 				// Obrisi postojeci termin
 				err = service.Repo.DeleteAvailability(existingAvailability.ID)
 				if err != nil {
+					log.Println(err)
 					return model.RequestMessage{}, err
 				}
 			}
@@ -116,6 +124,7 @@ func (service *AccomodationService) AddOrUpdateAvailability(availability *model.
 			// Sačuvaj promene u repozitorijumu
 			err = service.Repo.UpdateAvailability(&existingAvailability)
 			if err != nil {
+				log.Println(err)
 				// Greška pri ažuriranju postojećeg dostupnog termina
 				return model.RequestMessage{}, err
 			}
@@ -133,6 +142,7 @@ func (service *AccomodationService) AddOrUpdateAvailability(availability *model.
 func (service *AccomodationService) GetAllAccomodationsByIDHost(hostID uuid.UUID) ([]model.Accomodation, error) {
 	accomodations, err := service.Repo.GetAllAccomodationByIDHost(hostID)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	return accomodations, nil
@@ -141,6 +151,7 @@ func (service *AccomodationService) GetAllAccomodationsByIDHost(hostID uuid.UUID
 func (service *AccomodationService) GetAllAvailabilitiesByAccomodationID(accomodationID uuid.UUID) ([]model.Availability, error) {
 	availabilities, err := service.Repo.GetAllAvailabilityByIDAccomodation(accomodationID)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	return availabilities, nil
@@ -149,6 +160,7 @@ func (service *AccomodationService) GetAllAvailabilitiesByAccomodationID(accomod
 func (service *AccomodationService) FindByLocationAndNumOfGuests(location string, numOfGuests int) ([]model.Accomodation, model.RequestMessage) {
 	accommodations, err := service.Repo.FindByLocationAndNumOfGuests(location, numOfGuests)
 	if err.Message != "Success!" {
+		log.Println(err)
 		return nil, model.RequestMessage{
 			Message: "An error occurred, please try again!",
 		}
@@ -159,6 +171,7 @@ func (service *AccomodationService) FindByLocationAndNumOfGuests(location string
 func (service *AccomodationService) FindByID(id uuid.UUID) (model.Accomodation, model.RequestMessage) {
 	accommodations, err := service.Repo.FindByID(id)
 	if err != nil {
+		log.Println(err)
 		return model.Accomodation{}, model.RequestMessage{
 			Message: "Accomodation not found!",
 		}

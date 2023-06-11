@@ -93,7 +93,7 @@ func (server *Server) startGrpcServer(accomodationHandler *handler.AccomodationH
 	grpcServer := grpc.NewServer(opts...)
 	accomodation.RegisterAccommodationServiceServer(grpcServer, accomodationHandler)
 	reflection.Register(grpcServer)
-	println("GRPC ACCOMMODATION SERVER USPJESNO NAPRAVLJEN")
+	log.Println("GRPC ACCOMMODATION SERVER USPJESNO NAPRAVLJEN")
 	if err := grpcServer.Serve(listener); err != nil {
 		log.Fatalf("failed to serve: %s", err)
 		println("GRPC ACCOMMODATION SERVER NIJE USPJESNO NAPRAVLJEN")

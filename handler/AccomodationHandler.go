@@ -42,6 +42,7 @@ func (handler *AccomodationHandler) CheckIfGuestHasReservationInPast(ctx context
 
 	hasResevation, err := bookingService.GuestHasReservationInPast(context.TODO(), &bookingServicepb.GuestHasReservationInPastRequest{AccomodationsId: ids, GuestId: request.GuestId})
 	if err != nil {
+		log.Println(err)
 		println(err.Error())
 		return nil, err
 	}
@@ -57,6 +58,7 @@ func (handler *AccomodationHandler) CheckIfGuestHasReservationInPast(ctx context
 func (handler *AccomodationHandler) GetOneAccomodation(ctx context.Context, request *pb.GetOneAccomodationRequest) (*pb.GetOneAccomodationResponse, error) {
 	accomodationID, err := uuid.Parse(request.AccomodationId)
 	if err != nil {
+		log.Println(err)
 		return &pb.GetOneAccomodationResponse{}, err
 	}
 
@@ -70,6 +72,9 @@ func (handler *AccomodationHandler) GetOneAccomodation(ctx context.Context, requ
 func (handler *AccomodationHandler) Create(ctx context.Context, request *pb.CreateRequest) (*pb.CreateResponse, error) {
 	accomodation := mapAccomodationFromCreateAccomodation(request)
 	message, err := handler.Service.CreateAccomodation(&accomodation)
+	if err != nil {
+		log.Println(err)
+	}
 	response := pb.CreateResponse{
 		Message: message.Message,
 	}
@@ -80,6 +85,9 @@ func (handler *AccomodationHandler) Create(ctx context.Context, request *pb.Crea
 func (handler *AccomodationHandler) UpdateAvailability(ctx context.Context, request *pb.UpdateAvailabilityRequest) (*pb.UpdateAvailabilityResponse, error) {
 	slot := mapSlotFromUpdateAvailability(request)
 	message, err := handler.Service.AddOrUpdateAvailability(&slot)
+	if err != nil {
+		log.Println(err)
+	}
 	response := pb.UpdateAvailabilityResponse{
 		Message: message.Message,
 	}
@@ -90,11 +98,13 @@ func (handler *AccomodationHandler) UpdateAvailability(ctx context.Context, requ
 func (handler *AccomodationHandler) GetAllAccomodations(ctx context.Context, request *pb.GetAllAccomodationsRequest) (*pb.GetAllAccomodationsResponse, error) {
 	hostID, err := uuid.Parse(request.HostId)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
 	accommodations, err := handler.Service.GetAllAccomodationsByIDHost(hostID)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
@@ -110,14 +120,18 @@ func (handler *AccomodationHandler) GetAllAccomodations(ctx context.Context, req
 
 func (handler *AccomodationHandler) GetAutoApprovalForAccommodation(ctx context.Context, in *pb.AutoApprovalRequest) (*pb.AutoApprovalResponse, error) {
 
-	println("U METODU GetAutoApprovalForAccommodation STIGAO:", in.AccommodationId)
+	log.Println("U METODU GetAutoApprovalForAccommodation STIGAO:", in.AccommodationId)
 	accomodationID, err := uuid.Parse(in.AccommodationId)
 	if err != nil {
-		println("ISPARSIRAO ID OVAKO: ", accomodationID.String())
+		log.Println(err)
+		log.Println("ISPARSIRAO ID OVAKO: ", accomodationID.String())
 		panic(err)
 	}
 	accommodation, err := handler.Service.Repo.FindByID(accomodationID)
-	println("IZ BAZE DOBAOVIO OVAJ APPROVAL: ", accommodation.AutoApproval, "I OVAJ ID", accommodation.ID.String())
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println("IZ BAZE DOBAOVIO OVAJ APPROVAL: ", accommodation.AutoApproval, "I OVAJ ID", accommodation.ID.String())
 
 	return &pb.AutoApprovalResponse{
 		AutoApproval: accommodation.AutoApproval,
@@ -131,6 +145,7 @@ func (handler *AccomodationHandler) Search(ctx context.Context, request *pb.Sear
 	//Filtriranje prema lokaciji i broju gostiju
 	accommodations, requestMessage := handler.Service.FindByLocationAndNumOfGuests(searchRequest.Location, searchRequest.NumOfGuests)
 	if requestMessage.Message != "Success!" {
+		log.Println("an error occurred:", requestMessage.Message)
 		return nil, fmt.Errorf("an error occurred: %s", requestMessage.Message)
 	}
 
@@ -147,6 +162,7 @@ func (handler *AccomodationHandler) Search(ctx context.Context, request *pb.Sear
 
 		availabilities, err := handler.Service.GetAllAvailabilitiesByAccomodationID(accommodation.ID)
 		if err != nil {
+			log.Println(err)
 			return nil, err
 		}
 
@@ -154,12 +170,14 @@ func (handler *AccomodationHandler) Search(ctx context.Context, request *pb.Sear
 
 			startDate, err := time.Parse("2006-01-02", availability.StartDate)
 			if err != nil {
+				log.Println("Error whiile parsing date:", err)
 				fmt.Println("Error whiile parsing date:", err)
 				return nil, err
 			}
 
 			endDate, err := time.Parse("2006-01-02", availability.EndDate)
 			if err != nil {
+				log.Println("Error whiile parsing date:", err)
 				fmt.Println("Error whiile parsing date:", err)
 				return nil, err
 			}
@@ -170,7 +188,7 @@ func (handler *AccomodationHandler) Search(ctx context.Context, request *pb.Sear
 				daysDiff := int(duration.Hours() / 24)
 
 				if daysDiff >= numOfDays {
-					if accommodation.PricePerGuest == true {
+					if accommodation.PricePerGuest {
 						totalPrice = totalPrice + int(availability.Price)*numOfDays*searchRequest.NumOfGuests
 						availableAccommodations = append(availableAccommodations, *mapAccomodationOnAccommodationDTO(&accommodation, totalPrice))
 					} else {
@@ -178,7 +196,7 @@ func (handler *AccomodationHandler) Search(ctx context.Context, request *pb.Sear
 						availableAccommodations = append(availableAccommodations, *mapAccomodationOnAccommodationDTO(&accommodation, totalPrice))
 					}
 				} else {
-					if accommodation.PricePerGuest == true {
+					if accommodation.PricePerGuest {
 						totalPrice = totalPrice + int(availability.Price)*daysDiff*searchRequest.NumOfGuests
 						numOfDays = numOfDays - daysDiff
 						start = endDate
@@ -199,7 +217,7 @@ func (handler *AccomodationHandler) Search(ctx context.Context, request *pb.Sear
 	//rpc GetAllBookings
 	conn, err := grpc.Dial("booking-service:8000", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	defer conn.Close()
 
@@ -207,7 +225,7 @@ func (handler *AccomodationHandler) Search(ctx context.Context, request *pb.Sear
 
 	bookings, err := bookingService.GetAll(context.TODO(), &bookingServicepb.EmptyRequst{})
 	if err != nil {
-		println(err.Error())
+		log.Println(err)
 		return nil, err
 	}
 
@@ -223,19 +241,19 @@ func (handler *AccomodationHandler) Search(ctx context.Context, request *pb.Sear
 
 				startDate, err := time.Parse("2006-01-02", booking.StartDate)
 				if err != nil {
-					fmt.Println("Error whiile parsing date:", err)
+					log.Println("Error whiile parsing date:", err)
 					return nil, err
 				}
 
 				endDate, err := time.Parse("2006-01-02", booking.EndDate)
 				if err != nil {
-					fmt.Println("Error whiile parsing date:", err)
+					log.Println("Error whiile parsing date:", err)
 					return nil, err
 				}
-				println("POZVAO RANGESOVERLAP ZA", startDate.String(), endDate.String(), searchRequest.StartDate.String(), searchRequest.EndDate.String())
+				log.Println("POZVAO RANGESOVERLAP ZA", startDate.String(), endDate.String(), searchRequest.StartDate.String(), searchRequest.EndDate.String())
 				if rangesOverlap(startDate, endDate, searchRequest.StartDate, searchRequest.EndDate) {
 					//izbaci smjestaj iz liste dostupnih
-					println("ovi datumi se preklapaju ", startDate.String(), endDate.String(), searchRequest.StartDate.String(), searchRequest.EndDate.String())
+					log.Println("ovi datumi se preklapaju ", startDate.String(), endDate.String(), searchRequest.StartDate.String(), searchRequest.EndDate.String())
 					removeAccommodationFromList(&availableAccommodations, &accomodation)
 				}
 			}
@@ -274,11 +292,13 @@ func removeAccommodationFromList(accommodations *[]model.AccomodationDTO, accomm
 func (handler *AccomodationHandler) GetAllAvailability(ctx context.Context, request *pb.GetAllAvailabilityRequest) (*pb.GetAllAvailabilityResponse, error) {
 	accomodationID, err := uuid.Parse(request.AccomodationId)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
 	availabilities, err := handler.Service.GetAllAvailabilitiesByAccomodationID(accomodationID)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 
