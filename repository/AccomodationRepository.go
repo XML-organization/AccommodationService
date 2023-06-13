@@ -24,8 +24,9 @@ func NewAccomodationRepository(db *gorm.DB) *AccomodationRepository {
 }
 
 func (repo *AccomodationRepository) CreateAccomodation(accomodation *model.Accomodation) model.RequestMessage {
+	println("Id accomodationa prilikom cuvanje u postgre: " + accomodation.ID.String())
 	dbResult := repo.DatabaseConnection.Save(accomodation)
-
+	println()
 	if dbResult.Error != nil {
 		println(dbResult.Error.Error())
 		return model.RequestMessage{

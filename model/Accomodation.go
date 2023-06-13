@@ -2,7 +2,6 @@ package model
 
 import (
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
 type Accomodation struct {
@@ -19,11 +18,6 @@ type Accomodation struct {
 	MinGuests     int       `json:"minGuests"`
 	MaxGuests     int       `json:"maxGuests"`
 	IDHost        uuid.UUID `gorm:"column:id_host" json:"idHost"`
-}
-
-func (accomodation *Accomodation) BeforeCreate(scope *gorm.DB) error {
-	accomodation.ID = uuid.New()
-	return nil
 }
 
 type RequestMessage struct {

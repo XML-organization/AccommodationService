@@ -117,6 +117,7 @@ func mapAccomodation(accomodation *model.Accomodation) *pb.Accomodation {
 }
 
 func mapAccomodationOnAccommodationDTO(accomodation *model.Accomodation, totalPrice int) *model.AccomodationDTO {
+	println("Id smjestaja prilikom search: " + accomodation.ID.String())
 	accomodationDTO := &model.AccomodationDTO{
 		ID:            accomodation.ID,
 		Name:          accomodation.Name,
@@ -137,6 +138,7 @@ func mapAccomodationOnAccommodationDTO(accomodation *model.Accomodation, totalPr
 }
 
 func mapAccomodationDTOToAccommodationSearchResponse(accomodation *model.AccomodationDTO) *pb.AccomodationDTO {
+	println("Accommodation id u search responsu: " + accomodation.ID.String())
 	accomodationPb := &pb.AccomodationDTO{
 		Id:            accomodation.ID.String(),
 		Name:          accomodation.Name,

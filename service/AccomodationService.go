@@ -4,19 +4,20 @@ import (
 	"accomodation-service/model"
 	"accomodation-service/repository"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 type AccomodationService struct {
-	Repo *repository.AccomodationRepository
+	Repo      *repository.AccomodationRepository
+	Neo4jRepo *repository.AccommodationNeo4jRepository
 }
 
-func NewAccomodationService(repo *repository.AccomodationRepository) *AccomodationService {
+func NewAccomodationService(repo *repository.AccomodationRepository, neo4jRepo *repository.AccommodationNeo4jRepository) *AccomodationService {
 	return &AccomodationService{
-		Repo: repo,
+		Repo:      repo,
+		Neo4jRepo: neo4jRepo,
 	}
 }
 
@@ -26,11 +27,9 @@ func (service *AccomodationService) FindAllAccomodationIDsByHostId(id string) []
 }
 
 func (service *AccomodationService) CreateAccomodation(accomodation *model.Accomodation) (model.RequestMessage, error) {
-	println("acc servis")
-	println(strconv.FormatBool(accomodation.AutoApproval))
-	println(accomodation.Name)
-	println(accomodation.Photos)
-	println(accomodation.IDHost.String())
+
+	accomodation.ID = uuid.New()
+	service.Neo4jRepo.SaveAccommodation(accomodation.ID.String())
 	response := model.RequestMessage{
 		Message: service.Repo.CreateAccomodation(accomodation).Message,
 	}
