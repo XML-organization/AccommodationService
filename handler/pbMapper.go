@@ -3,6 +3,7 @@ package handler
 import (
 	"accomodation-service/model"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -204,5 +205,30 @@ func mapAccomodationSearchToSearchRequest(accomodationSearch *model.Accomodation
 		StartDate:   startDate,
 		EndDate:     endDate,
 		NumOfGuests: guestNumber,
+	}
+}
+
+func mapHostGradeFromRequest(grade *pb.GradeHostRequest) model.HostGrade {
+
+	accommodationID, err := uuid.Parse(grade.ID)
+	if err != nil {
+		panic(err)
+	}
+	userId, err := uuid.Parse(grade.UserId)
+	if err != nil {
+		panic(err)
+	}
+	gradeValue, err := strconv.ParseFloat(grade.Grade, 64)
+	if err != nil {
+		log.Println("Error parsing grade:", err)
+	}
+
+	return model.HostGrade{
+
+		ID:          accommodationID,
+		UserId:      userId,
+		UserName:    grade.UserName,
+		UserSurname: grade.UserSurname,
+		Grade:       gradeValue,
 	}
 }

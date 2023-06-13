@@ -8,6 +8,7 @@ import (
 	"log"
 	"time"
 
+	accomodation "github.com/XML-organization/common/proto/accomodation_service"
 	pb "github.com/XML-organization/common/proto/accomodation_service"
 	bookingServicepb "github.com/XML-organization/common/proto/booking_service"
 	"github.com/google/uuid"
@@ -290,4 +291,31 @@ func (handler *AccomodationHandler) GetAllAvailability(ctx context.Context, requ
 		response.Availabilities = append(response.Availabilities, current)
 	}
 	return response, nil
+}
+
+func (handler *AccomodationHandler) GetAccomodations(ctx context.Context, empty *accomodation.EmptyRequst) (*pb.GetAllAccomodationsResponse, error) {
+
+	accommodations, err := handler.Service.GetAccomodations()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &pb.GetAllAccomodationsResponse{
+		Accomodations: []*pb.Accomodation{},
+	}
+	for _, accomodation := range accommodations {
+		current := mapAccomodation(&accomodation)
+		response.Accomodations = append(response.Accomodations, current)
+	}
+	return response, nil
+}
+
+func (handler *AccomodationHandler) GradeHost(ctx context.Context, request *pb.GradeHostRequest) (*pb.GradeHostResponse, error) {
+	hostGrade := mapHostGradeFromRequest(request)
+	message, err := handler.Service.GradeHost(&hostGrade)
+	response := pb.GradeHostResponse{
+		Message: message.Message,
+	}
+
+	return &response, err
 }
