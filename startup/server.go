@@ -37,7 +37,8 @@ func (server *Server) Start() {
 	neo4jDriver := server.initNeo4jDriver()
 	AccomodationRepo := server.initAccomodationRepository(postgresClient)
 	AccommodationNeo4jRepo := server.initAccommodationNeo4jRepository(neo4jDriver)
-	AccomodationService := server.initAccomodationService(AccomodationRepo, AccommodationNeo4jRepo)
+	AccommodationRateNeo4jRepo := server.initAccommodationRateNeo4jRepository(neo4jDriver)
+	AccomodationService := server.initAccomodationService(AccomodationRepo, AccommodationNeo4jRepo, AccommodationRateNeo4jRepo)
 
 	AcoomodationHandler := server.initAccomodationHandler(AccomodationService)
 
@@ -89,12 +90,16 @@ func (server *Server) initAccommodationNeo4jRepository(driver *neo4j.Driver) *re
 	return repository.NewAccommodationNeo4jRepository(*driver)
 }
 
+func (server *Server) initAccommodationRateNeo4jRepository(driver *neo4j.Driver) *repository.AccommodationRateNeo4jRepository {
+	return repository.NewAccommodationRateNeo4jRepository(*driver)
+}
+
 func (server *Server) initAccomodationRepository(client *gorm.DB) *repository.AccomodationRepository {
 	return repository.NewAccomodationRepository(client)
 }
 
-func (server *Server) initAccomodationService(repo *repository.AccomodationRepository, neo4jRepo *repository.AccommodationNeo4jRepository) *service.AccomodationService {
-	return service.NewAccomodationService(repo, neo4jRepo)
+func (server *Server) initAccomodationService(repo *repository.AccomodationRepository, neo4jRepo *repository.AccommodationNeo4jRepository, neo4jRateRepo *repository.AccommodationRateNeo4jRepository) *service.AccomodationService {
+	return service.NewAccomodationService(repo, neo4jRepo, neo4jRateRepo)
 }
 
 func (server *Server) initAccomodationHandler(service *service.AccomodationService) *handler.AccomodationHandler {

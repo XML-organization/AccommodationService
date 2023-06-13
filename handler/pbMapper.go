@@ -220,7 +220,7 @@ func mapAccomodationSearchToSearchRequest(accomodationSearch *model.Accomodation
 
 func mapHostGradeFromRequest(grade *pb.GradeHostRequest) model.HostGrade {
 
-	accommodationID, err := uuid.Parse(grade.ID)
+	accommodationID, err := uuid.Parse(grade.AccomodationId)
 	if err != nil {
 		panic(err)
 	}
@@ -233,12 +233,45 @@ func mapHostGradeFromRequest(grade *pb.GradeHostRequest) model.HostGrade {
 		log.Println("Error parsing grade:", err)
 	}
 
-	return model.HostGrade{
+	layout := "2006-01-02"
+	t := time.Now()
+	formattedDate, _ := time.Parse(layout, t.Format(layout))
 
-		ID:          accommodationID,
-		UserId:      userId,
-		UserName:    grade.UserName,
-		UserSurname: grade.UserSurname,
-		Grade:       gradeValue,
+	id := uuid.New()
+
+	return model.HostGrade{
+		ID:              id,
+		AccommodationId: accommodationID,
+		UserId:          userId,
+		UserName:        grade.UserName,
+		UserSurname:     grade.UserSurname,
+		Grade:           gradeValue,
+		Date:            formattedDate,
 	}
+}
+
+func mapAccommodationsToResponse(accommodations []model.Accomodation) *pb.GetAccommodationRecommendationsResponse {
+	response := &pb.GetAccommodationRecommendationsResponse{
+		Accomodations: make([]*pb.Accomodation, len(accommodations)),
+	}
+
+	for i, a := range accommodations {
+		response.Accomodations[i] = &pb.Accomodation{
+			Id:            a.ID.String(),
+			Name:          a.Name,
+			Location:      a.Location,
+			Wifi:          a.Wifi,
+			Kitchen:       a.Kitchen,
+			AirCondition:  a.AirCondition,
+			FreeParking:   a.FreeParking,
+			AutoApproval:  a.AutoApproval,
+			Photos:        a.Photos,
+			MinGuests:     strconv.Itoa(a.MinGuests),
+			MaxGuests:     strconv.Itoa(a.MaxGuests),
+			IdHost:        a.IDHost.String(),
+			PricePerGuest: a.PricePerGuest,
+		}
+	}
+
+	return response
 }

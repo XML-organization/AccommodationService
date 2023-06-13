@@ -11,14 +11,16 @@ import (
 )
 
 type AccomodationService struct {
-	Repo      *repository.AccomodationRepository
-	Neo4jRepo *repository.AccommodationNeo4jRepository
+	Repo          *repository.AccomodationRepository
+	Neo4jRepo     *repository.AccommodationNeo4jRepository
+	Neo4jRateRepo *repository.AccommodationRateNeo4jRepository
 }
 
-func NewAccomodationService(repo *repository.AccomodationRepository, neo4jRepo *repository.AccommodationNeo4jRepository) *AccomodationService {
+func NewAccomodationService(repo *repository.AccomodationRepository, neo4jRepo *repository.AccommodationNeo4jRepository, rateRepo *repository.AccommodationRateNeo4jRepository) *AccomodationService {
 	return &AccomodationService{
-		Repo:      repo,
-		Neo4jRepo: neo4jRepo,
+		Repo:          repo,
+		Neo4jRepo:     neo4jRepo,
+		Neo4jRateRepo: rateRepo,
 	}
 }
 
@@ -191,9 +193,25 @@ func (service *AccomodationService) GetAccomodations() ([]model.Accomodation, er
 func (service *AccomodationService) GradeHost(hostGrade *model.HostGrade) (model.RequestMessage, error) {
 	log.Println("Call function GradeHost")
 
+	service.Neo4jRateRepo.SaveRating(*hostGrade)
+
 	response := model.RequestMessage{
 		Message: service.Repo.GradeHost(hostGrade).Message,
 	}
 
 	return response, nil
+}
+
+func (service *AccomodationService) GetAccommodationRecommendations(userId string) ([]model.Accomodation, error) {
+	log.Println("Call function GetAccommodationRecommendations")
+
+	accommodationIds, err := service.Neo4jRepo.GetAccommodationRecommentadions(userId)
+
+	if err != nil {
+		return []model.Accomodation{}, err
+	}
+
+	log.Printf(accommodationIds[0])
+
+	return service.Repo.FindAccommodationsByIds(accommodationIds)
 }

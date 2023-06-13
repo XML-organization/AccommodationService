@@ -169,3 +169,15 @@ func (repo *AccomodationRepository) GradeHost(hostGrade *model.HostGrade) model.
 		Message: "Success!",
 	}
 }
+
+func (repo *AccomodationRepository) FindAccommodationsByIds(ids []string) ([]model.Accomodation, error) {
+	var accommodations []model.Accomodation
+	dbResult := repo.DatabaseConnection.Where("id IN (?)", ids).Find(&accommodations)
+
+	if dbResult.Error != nil {
+		log.Println(dbResult.Error)
+		return nil, dbResult.Error
+	}
+
+	return accommodations, nil
+}

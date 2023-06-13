@@ -339,3 +339,14 @@ func (handler *AccomodationHandler) GradeHost(ctx context.Context, request *pb.G
 
 	return &response, err
 }
+
+func (handler *AccomodationHandler) GetAccommodationRecommendations(ctx context.Context, request *pb.GetAccommodationRecommendationsRequest) (*pb.GetAccommodationRecommendationsResponse, error) {
+	accommodations, err := handler.Service.GetAccommodationRecommendations(request.UserId)
+
+	if err != nil {
+		log.Println("Some error occurred when recommending an accommodation!")
+		return mapAccommodationsToResponse(accommodations), err
+	}
+
+	return mapAccommodationsToResponse(accommodations), nil
+}
