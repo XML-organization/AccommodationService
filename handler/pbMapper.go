@@ -3,6 +3,7 @@ package handler
 import (
 	"accomodation-service/model"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -23,14 +24,17 @@ func mapAccomodationFromCreateAccomodation(accomodation *pb.CreateRequest) model
 	println(accomodation.IDHost)
 	hostID, err := uuid.Parse(accomodation.IDHost)
 	if err != nil {
+		log.Println(err)
 		panic(err)
 	}
 	min, err := strconv.Atoi(accomodation.MinGuests)
 	if err != nil {
+		log.Println(err)
 		panic(err)
 	}
 	max, err := strconv.Atoi(accomodation.MaxGuests)
 	if err != nil {
+		log.Println(err)
 		panic(err)
 	}
 	/* 	wifi, err := strconv.ParseBool(accomodation.Wifi)
@@ -81,11 +85,13 @@ func mapSlotFromUpdateAvailability(slot *pb.UpdateAvailabilityRequest) model.Ava
 
 	accomodationID, err := uuid.Parse(slot.AccomodationId)
 	if err != nil {
+		log.Println(err)
 		panic(err)
 	}
 
 	price, err := strconv.ParseFloat(slot.Price, 64)
 	if err != nil {
+		log.Println(err)
 		panic(err)
 	}
 
@@ -173,6 +179,7 @@ func mapAccomodationSearchFromSearchRequest(search *pb.SearchRequest) model.Acco
 
 	num, err := strconv.Atoi(search.NumOfGuests)
 	if err != nil {
+		log.Println(err)
 		panic(err)
 	}
 
@@ -180,11 +187,13 @@ func mapAccomodationSearchFromSearchRequest(search *pb.SearchRequest) model.Acco
 
 	startDate, err := time.Parse(layout, search.StartDate)
 	if err != nil {
+		log.Println(err)
 		panic(err)
 	}
 
 	endDate, err := time.Parse(layout, search.EndDate)
 	if err != nil {
+		log.Println(err)
 		panic(err)
 	}
 
