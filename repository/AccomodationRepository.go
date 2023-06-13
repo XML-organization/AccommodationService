@@ -14,7 +14,7 @@ type AccomodationRepository struct {
 }
 
 func NewAccomodationRepository(db *gorm.DB) *AccomodationRepository {
-	err := db.AutoMigrate(&model.Accomodation{}, &model.Availability{})
+	err := db.AutoMigrate(&model.Accomodation{}, &model.Availability{}, &model.HostGrade{})
 	if err != nil {
 		log.Println(err)
 		return nil
@@ -144,4 +144,28 @@ func (repo *AccomodationRepository) FindAllByHostId(id string) []string {
 	}
 
 	return accommodationIDs
+}
+
+func (repo *AccomodationRepository) GetAccomodations() ([]model.Accomodation, error) {
+	accomodations := []model.Accomodation{}
+	result := repo.DatabaseConnection.Find(&accomodations)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return accomodations, nil
+}
+
+func (repo *AccomodationRepository) GradeHost(hostGrade *model.HostGrade) model.RequestMessage {
+	dbResult := repo.DatabaseConnection.Save(hostGrade)
+
+	if dbResult.Error != nil {
+		println(dbResult.Error.Error())
+		return model.RequestMessage{
+			Message: "An error occured, please try again!",
+		}
+	}
+
+	return model.RequestMessage{
+		Message: "Success!",
+	}
 }

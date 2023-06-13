@@ -179,3 +179,21 @@ func (service *AccomodationService) FindByID(id uuid.UUID) (model.Accomodation, 
 		Message: "Successfully!",
 	}
 }
+
+func (service *AccomodationService) GetAccomodations() ([]model.Accomodation, error) {
+	accomodations, err := service.Repo.GetAccomodations()
+	if err != nil {
+		return nil, err
+	}
+	return accomodations, nil
+}
+
+func (service *AccomodationService) GradeHost(hostGrade *model.HostGrade) (model.RequestMessage, error) {
+	log.Println("Call function GradeHost")
+
+	response := model.RequestMessage{
+		Message: service.Repo.GradeHost(hostGrade).Message,
+	}
+
+	return response, nil
+}
