@@ -38,38 +38,137 @@ func (repo *AccommodationNeo4jRepository) SaveAccommodation(accommodationId stri
 	return nil
 }
 
-func (repo *AccommodationNeo4jRepository) GetAccommodationRecommentadions(userId string) ([]string, error) {
+func (repo *AccommodationNeo4jRepository) FindSimilarUsers(userID string) ([]string, error) {
 	session := repo.Session
 
-	// Pronalaženje sličnih korisnika
-	similarUsersQuery := `
-		MATCH (u1:User {idInPostgre: $userId})-[:Reservation]->(:Accommodation)<-[:Reservation]-(u2:User)
-		WHERE u1 <> u2
-		WITH u1, u2
-		MATCH (u2)-[r:Rate]->(a:Accommodation)
-		WITH a, AVG(r.grade) AS averageGrade
-		WHERE averageGrade >= 3
-		WITH a, COUNT(*) AS ratingCount
-		WHERE ratingCount >= 5
-		RETURN a.idInPostgre AS accommodationId, averageGrade, ratingCount
-		ORDER BY averageGrade DESC
-		LIMIT 10
-	`
+	result, err := session.ReadTransaction(func(tx neo4j.Transaction) (interface{}, error) {
+		params := map[string]interface{}{
+			"userID": userID,
+		}
 
-	result, err := session.Run(similarUsersQuery, map[string]interface{}{
-		"userId": userId,
+		query := `
+			MATCH (u:User {idInPostgre: $userID})-[:Reservation]->(a:Accommodation)
+			WITH a, u
+			MATCH (u2:User)-[:Reservation]->(a)
+			WHERE u2 <> u
+			RETURN DISTINCT u2.idInPostgre AS similarUserID
+		`
+
+		cursor, err := tx.Run(query, params)
+		if err != nil {
+			return nil, err
+		}
+
+		var similarUserIDs []string
+		for cursor.Next() {
+			record := cursor.Record()
+			similarUserID := record.GetByIndex(0).(string)
+			similarUserIDs = append(similarUserIDs, similarUserID)
+		}
+
+		return similarUserIDs, nil
 	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	// Sakupljanje preporučenih smeštaja
-	accommodationIds := make([]string, 0)
-	for result.Next() {
-		record := result.Record()
-		accommodationId, _ := record.Get("accommodationId")
-		accommodationIds = append(accommodationIds, accommodationId.(string))
+	return result.([]string), nil
+}
+
+func (repo *AccommodationNeo4jRepository) FindRecommendedAccommodations(similarUserIDs []string) ([]string, error) {
+	session := repo.Session
+
+	result, err := session.Run(`
+		MATCH (u:User)-[:Reservation]->(a:Accommodation)<-[r:Rate]-(rUser:User)
+		WHERE u.idInPostgre IN $similarUserIDs and r.grade > 3
+		WITH a, COLLECT(DISTINCT u.idInPostgre) AS userIDs
+		WHERE SIZE(userIDs) < SIZE($similarUserIDs)
+		RETURN DISTINCT a.idInPostgre AS recommendedAccommodationID
+
+	`, map[string]interface{}{
+		"similarUserIDs": similarUserIDs,
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
-	return accommodationIds, nil
+	var recommendedAccommodationIDs []string
+	for result.Next() {
+		record := result.Record()
+		recommendedAccommodationIDValue, found := record.Get("recommendedAccommodationID")
+		if found {
+			recommendedAccommodationID, ok := recommendedAccommodationIDValue.(string)
+			if ok {
+				recommendedAccommodationIDs = append(recommendedAccommodationIDs, recommendedAccommodationID)
+			}
+		}
+	}
+
+	return recommendedAccommodationIDs, nil
+}
+
+func (repo *AccommodationNeo4jRepository) FilterAccommodations(recommendedAccommodationIDs []string) ([]string, error) {
+	session := repo.Session
+
+	result, err := session.Run(`
+		MATCH (a:Accommodation)<-[r:Rate]-(:User)
+		WHERE a.idInPostgre IN $recommendedAccommodationIDs
+		WITH a, SUM(CASE WHEN r.grade < 3 AND r.date >= datetime() - duration({months: 3}) THEN 1 ELSE 0 END) AS lowRatingsCount
+		WHERE lowRatingsCount <= 5
+		RETURN a.idInPostgre AS filteredAccommodationID
+	`, map[string]interface{}{
+		"recommendedAccommodationIDs": recommendedAccommodationIDs,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var filteredAccommodationIDs []string
+	for result.Next() {
+		record := result.Record()
+		filteredAccommodationIDValue, found := record.Get("filteredAccommodationID")
+		if found {
+			filteredAccommodationID, ok := filteredAccommodationIDValue.(string)
+			if ok {
+				filteredAccommodationIDs = append(filteredAccommodationIDs, filteredAccommodationID)
+			}
+		}
+	}
+
+	return filteredAccommodationIDs, nil
+}
+
+func (repo *AccommodationNeo4jRepository) RankAccommodations(filteredAccommodationIDs []string) ([]string, error) {
+	session := repo.Session
+
+	result, err := session.Run(`
+		MATCH (a:Accommodation)<-[:Rate]-(r:User)
+		WHERE a.idInPostgre IN $filteredAccommodationIDs
+		WITH a, avg(r.grade) AS overallRating
+		RETURN a.idInPostgre AS rankedAccommodationID
+		ORDER BY overallRating DESC
+	`, map[string]interface{}{
+		"filteredAccommodationIDs": filteredAccommodationIDs,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	var rankedAccommodationIDs []string
+	for result.Next() {
+		record := result.Record()
+		rankedAccommodationIDValue, found := record.Get("rankedAccommodationID")
+		if found {
+			rankedAccommodationID, ok := rankedAccommodationIDValue.(string)
+			if ok {
+				rankedAccommodationIDs = append(rankedAccommodationIDs, rankedAccommodationID)
+			}
+		}
+	}
+
+	return rankedAccommodationIDs, nil
 }

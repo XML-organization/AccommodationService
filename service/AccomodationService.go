@@ -205,13 +205,49 @@ func (service *AccomodationService) GradeHost(hostGrade *model.HostGrade) (model
 func (service *AccomodationService) GetAccommodationRecommendations(userId string) ([]model.Accomodation, error) {
 	log.Println("Call function GetAccommodationRecommendations")
 
-	accommodationIds, err := service.Neo4jRepo.GetAccommodationRecommentadions(userId)
+	similarUserIds, err1 := service.Neo4jRepo.FindSimilarUsers(userId)
+
+	if err1 != nil {
+		return []model.Accomodation{}, err1
+	}
+
+	log.Println("Similar users id: ")
+	for _, id := range similarUserIds {
+		log.Println(id)
+	}
+
+	recommendedAccommodationIds, err2 := service.Neo4jRepo.FindRecommendedAccommodations(similarUserIds)
+
+	if err2 != nil {
+		return []model.Accomodation{}, err2
+	}
+
+	log.Println("Recommended accomodations id: ")
+	for _, id := range recommendedAccommodationIds {
+		log.Println(id)
+	}
+
+	filterAndRankAccommodations, err := service.Neo4jRepo.FilterAccommodations(recommendedAccommodationIds)
 
 	if err != nil {
 		return []model.Accomodation{}, err
 	}
 
-	log.Printf(accommodationIds[0])
+	log.Println("Filtered recommended accomodations id: ")
+	for _, id := range filterAndRankAccommodations {
+		log.Println(id)
+	}
 
-	return service.Repo.FindAccommodationsByIds(accommodationIds)
+	rankedAccommodation, err3 := service.Neo4jRepo.RankAccommodations(filterAndRankAccommodations)
+
+	if err3 != nil {
+		return []model.Accomodation{}, err
+	}
+
+	log.Println("Ranked filtered recommended accomodations id: ")
+	for _, id := range filterAndRankAccommodations {
+		log.Println(id)
+	}
+
+	return service.Repo.FindAccommodationsByIds(rankedAccommodation)
 }
