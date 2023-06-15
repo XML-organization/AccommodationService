@@ -123,6 +123,7 @@ func mapAccomodation(accomodation *model.Accomodation) *pb.Accomodation {
 }
 
 func mapAccomodationOnAccommodationDTO(accomodation *model.Accomodation, totalPrice int) *model.AccomodationDTO {
+	println("Id smjestaja prilikom search: " + accomodation.ID.String())
 	accomodationDTO := &model.AccomodationDTO{
 		ID:            accomodation.ID,
 		Name:          accomodation.Name,
@@ -143,6 +144,7 @@ func mapAccomodationOnAccommodationDTO(accomodation *model.Accomodation, totalPr
 }
 
 func mapAccomodationDTOToAccommodationSearchResponse(accomodation *model.AccomodationDTO) *pb.AccomodationDTO {
+	println("Accommodation id u search responsu: " + accomodation.ID.String())
 	accomodationPb := &pb.AccomodationDTO{
 		Id:            accomodation.ID.String(),
 		Name:          accomodation.Name,
@@ -214,4 +216,62 @@ func mapAccomodationSearchToSearchRequest(accomodationSearch *model.Accomodation
 		EndDate:     endDate,
 		NumOfGuests: guestNumber,
 	}
+}
+
+func mapHostGradeFromRequest(grade *pb.GradeHostRequest) model.HostGrade {
+
+	accommodationID, err := uuid.Parse(grade.AccomodationId)
+	if err != nil {
+		panic(err)
+	}
+	userId, err := uuid.Parse(grade.UserId)
+	if err != nil {
+		panic(err)
+	}
+	gradeValue, err := strconv.ParseFloat(grade.Grade, 64)
+	if err != nil {
+		log.Println("Error parsing grade:", err)
+	}
+
+	layout := "2006-01-02"
+	t := time.Now()
+	formattedDate, _ := time.Parse(layout, t.Format(layout))
+
+	id := uuid.New()
+
+	return model.HostGrade{
+		ID:              id,
+		AccommodationId: accommodationID,
+		UserId:          userId,
+		UserName:        grade.UserName,
+		UserSurname:     grade.UserSurname,
+		Grade:           gradeValue,
+		Date:            formattedDate,
+	}
+}
+
+func mapAccommodationsToResponse(accommodations []model.Accomodation) *pb.GetAccommodationRecommendationsResponse {
+	response := &pb.GetAccommodationRecommendationsResponse{
+		Accomodations: make([]*pb.Accomodation, len(accommodations)),
+	}
+
+	for i, a := range accommodations {
+		response.Accomodations[i] = &pb.Accomodation{
+			Id:            a.ID.String(),
+			Name:          a.Name,
+			Location:      a.Location,
+			Wifi:          a.Wifi,
+			Kitchen:       a.Kitchen,
+			AirCondition:  a.AirCondition,
+			FreeParking:   a.FreeParking,
+			AutoApproval:  a.AutoApproval,
+			Photos:        a.Photos,
+			MinGuests:     strconv.Itoa(a.MinGuests),
+			MaxGuests:     strconv.Itoa(a.MaxGuests),
+			IdHost:        a.IDHost.String(),
+			PricePerGuest: a.PricePerGuest,
+		}
+	}
+
+	return response
 }

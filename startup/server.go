@@ -12,6 +12,7 @@ import (
 	accomodation "github.com/XML-organization/common/proto/accomodation_service"
 	saga "github.com/XML-organization/common/saga/messaging"
 	"github.com/XML-organization/common/saga/messaging/nats"
+	"github.com/neo4j/neo4j-go-driver/neo4j"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"gorm.io/gorm"
@@ -33,8 +34,11 @@ const (
 
 func (server *Server) Start() {
 	postgresClient := server.initPostgresClient()
+	neo4jDriver := server.initNeo4jDriver()
 	AccomodationRepo := server.initAccomodationRepository(postgresClient)
-	AccomodationService := server.initAccomodationService(AccomodationRepo)
+	AccommodationNeo4jRepo := server.initAccommodationNeo4jRepository(neo4jDriver)
+	AccommodationRateNeo4jRepo := server.initAccommodationRateNeo4jRepository(neo4jDriver)
+	AccomodationService := server.initAccomodationService(AccomodationRepo, AccommodationNeo4jRepo, AccommodationRateNeo4jRepo)
 
 	AcoomodationHandler := server.initAccomodationHandler(AccomodationService)
 
@@ -72,12 +76,30 @@ func (server *Server) initPostgresClient() *gorm.DB {
 	return client
 }
 
+func (server *Server) initNeo4jDriver() *neo4j.Driver {
+	driver, err := repository.GetNeo4jClient("bolt://accommodation_recommendation_db:7687", "neo4j", "password")
+
+	if err != nil {
+		return nil
+	}
+
+	return &driver
+}
+
+func (server *Server) initAccommodationNeo4jRepository(driver *neo4j.Driver) *repository.AccommodationNeo4jRepository {
+	return repository.NewAccommodationNeo4jRepository(*driver)
+}
+
+func (server *Server) initAccommodationRateNeo4jRepository(driver *neo4j.Driver) *repository.AccommodationRateNeo4jRepository {
+	return repository.NewAccommodationRateNeo4jRepository(*driver)
+}
+
 func (server *Server) initAccomodationRepository(client *gorm.DB) *repository.AccomodationRepository {
 	return repository.NewAccomodationRepository(client)
 }
 
-func (server *Server) initAccomodationService(repo *repository.AccomodationRepository) *service.AccomodationService {
-	return service.NewAccomodationService(repo)
+func (server *Server) initAccomodationService(repo *repository.AccomodationRepository, neo4jRepo *repository.AccommodationNeo4jRepository, neo4jRateRepo *repository.AccommodationRateNeo4jRepository) *service.AccomodationService {
+	return service.NewAccomodationService(repo, neo4jRepo, neo4jRateRepo)
 }
 
 func (server *Server) initAccomodationHandler(service *service.AccomodationService) *handler.AccomodationHandler {
