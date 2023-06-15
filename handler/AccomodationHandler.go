@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	accomodation "github.com/XML-organization/common/proto/accomodation_service"
@@ -349,4 +350,75 @@ func (handler *AccomodationHandler) GetAccommodationRecommendations(ctx context.
 	}
 
 	return mapAccommodationsToResponse(accommodations), nil
+}
+
+func (handler *AccomodationHandler) GetGradesByAccomodationId(ctx context.Context, request *pb.GradesByAccomodationIdRequest) (*pb.GradesByAccomodationIdResponse, error) {
+	accomodationId, err := uuid.Parse(request.AccomodationId)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	grades, err := handler.Service.GetGradesByAccomodationId(accomodationId)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	response := &pb.GradesByAccomodationIdResponse{
+		GradesByAccomodationId: []*pb.GradeHost{},
+	}
+	for _, grade := range grades {
+		current := mapGrades(&grade)
+		response.GradesByAccomodationId = append(response.GradesByAccomodationId, current)
+	}
+	return response, nil
+}
+
+func (handler *AccomodationHandler) EditGrade(ctx context.Context, request *pb.EditGradeRequest) (*pb.EditGradeResponse, error) {
+	gradeID, err := uuid.Parse(request.Id)
+	if err != nil {
+		panic(err)
+	}
+	gradeValue, err := strconv.ParseFloat(request.NewGrade, 64)
+	if err != nil {
+		log.Println("Error parsing grade:", err)
+	}
+
+	err1 := handler.Service.EditGrade(gradeID, gradeValue)
+	if err1 != nil {
+		log.Println(err)
+		response := pb.EditGradeResponse{
+			Message: "Error with edit grade!",
+		}
+
+		return &response, err1
+	}
+	response := pb.EditGradeResponse{
+		Message: "Sucessfulu edit grade!",
+	}
+
+	return &response, nil
+}
+
+func (handler *AccomodationHandler) DeleteGrade(ctx context.Context, request *pb.DeleteGradeRequest) (*pb.DeleteGradeResponse, error) {
+	gradeID, err := uuid.Parse(request.Id)
+	if err != nil {
+		panic(err)
+	}
+
+	err1 := handler.Service.DeleteGrade(gradeID)
+	if err1 != nil {
+		log.Println(err)
+		response := pb.DeleteGradeResponse{
+			Message: "Error with delete grade!",
+		}
+
+		return &response, err1
+	}
+	response := pb.DeleteGradeResponse{
+		Message: "Sucessfulu delete grade!",
+	}
+
+	return &response, nil
 }

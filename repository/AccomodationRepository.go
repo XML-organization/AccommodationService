@@ -181,3 +181,29 @@ func (repo *AccomodationRepository) FindAccommodationsByIds(ids []string) ([]mod
 
 	return accommodations, nil
 }
+
+func (repo *AccomodationRepository) GetGradesByAccomodationId(accomodationID uuid.UUID) ([]model.HostGrade, error) {
+	grades := []model.HostGrade{}
+	result := repo.DatabaseConnection.Where("accommodation_id = ?", accomodationID).Find(&grades)
+	if result.Error != nil {
+		log.Println(result.Error)
+		return nil, result.Error
+	}
+	return grades, nil
+}
+
+func (repo *AccomodationRepository) EditGrade(gradeId uuid.UUID, newGrade float64) error {
+	result := repo.DatabaseConnection.Model(&model.HostGrade{}).Where("id = ?", gradeId).Update("grade", newGrade)
+	log.Println(result.RowsAffected)
+	fmt.Println(result.RowsAffected)
+	return nil
+}
+
+func (repo *AccomodationRepository) DeleteGrade(gradeID uuid.UUID) error {
+	result := repo.DatabaseConnection.Delete(&model.HostGrade{}, gradeID)
+	if result.Error != nil {
+		log.Println(result.Error)
+		return result.Error
+	}
+	return nil
+}
