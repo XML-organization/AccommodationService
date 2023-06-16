@@ -97,16 +97,23 @@ func (handler *AccomodationHandler) UpdateAvailability(ctx context.Context, requ
 }
 
 func (handler *AccomodationHandler) GetAllAccomodations(ctx context.Context, request *pb.GetAllAccomodationsRequest) (*pb.GetAllAccomodationsResponse, error) {
+	println("Usao u Accomodation Service-----")
 	hostID, err := uuid.Parse(request.HostId)
 	if err != nil {
 		log.Println(err)
 		return nil, err
 	}
+	println("HostID u Accomodation Servicu poslije parsiranja: ", hostID.String())
 
 	accommodations, err := handler.Service.GetAllAccomodationsByIDHost(hostID)
 	if err != nil {
 		log.Println(err)
 		return nil, err
+	}
+	print("Lista koja je ucitana iz baze")
+	println("Dugacka je: ", len(accommodations))
+	for j, tmp := range accommodations {
+		println(j, ". Accomodation ID", tmp.Name)
 	}
 
 	response := &pb.GetAllAccomodationsResponse{
@@ -116,6 +123,14 @@ func (handler *AccomodationHandler) GetAllAccomodations(ctx context.Context, req
 		current := mapAccomodation(&accomodation)
 		response.Accomodations = append(response.Accomodations, current)
 	}
+
+	println("Accomodations koje vraca Accomodation Servis:")
+	println("Dugacka je: ", len(response.Accomodations))
+
+	for j, tmp := range response.Accomodations {
+		println(j, ". Accomodation ID", tmp.Name)
+	}
+
 	return response, nil
 }
 
