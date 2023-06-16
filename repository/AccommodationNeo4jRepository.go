@@ -47,11 +47,13 @@ func (repo *AccommodationNeo4jRepository) FindSimilarUsers(userID string) ([]str
 		}
 
 		query := `
-			MATCH (u:User {idInPostgre: $userID})-[:Reservation]->(a:Accommodation)
-			WITH a, u
-			MATCH (u2:User)-[:Reservation]->(a)
-			WHERE u2 <> u
+			MATCH (u1:User {idInPostgre: $userID})-[r1:Rate]->(a:Accommodation)
+			WITH u1, r1.grade AS rating
+			MATCH (u2:User)-[r2:Rate]->(a)
+			WHERE u2 <> u1 AND r2.grade >= rating - 1 AND r2.grade <= rating + 1
 			RETURN DISTINCT u2.idInPostgre AS similarUserID
+
+		
 		`
 
 		cursor, err := tx.Run(query, params)
@@ -80,10 +82,9 @@ func (repo *AccommodationNeo4jRepository) FindRecommendedAccommodations(similarU
 	session := repo.Session
 
 	result, err := session.Run(`
-		MATCH (u:User)-[:Reservation]->(a:Accommodation)<-[r:Rate]-(rUser:User)
-		WHERE u.idInPostgre IN $similarUserIDs and r.grade > 3
-		WITH a, COLLECT(DISTINCT u.idInPostgre) AS userIDs
-		WHERE SIZE(userIDs) < SIZE($similarUserIDs)
+		MATCH (u:User)-[r:Rate]->(a:Accommodation)
+		WHERE u.idInPostgre IN $similarUserIDs
+	  	AND r.grade > 3
 		RETURN DISTINCT a.idInPostgre AS recommendedAccommodationID
 
 	`, map[string]interface{}{
@@ -145,11 +146,12 @@ func (repo *AccommodationNeo4jRepository) RankAccommodations(filteredAccommodati
 	session := repo.Session
 
 	result, err := session.Run(`
-		MATCH (a:Accommodation)<-[:Rate]-(r:User)
-		WHERE a.idInPostgre IN $filteredAccommodationIDs
-		WITH a, avg(r.grade) AS overallRating
-		RETURN a.idInPostgre AS rankedAccommodationID
-		ORDER BY overallRating DESC
+	MATCH (a:Accommodation)<-[:Rate]-(r:User)
+	WHERE a.idInPostgre IN $filteredAccommodationIDs
+	WITH a, avg(r.grade) AS overallRating
+	RETURN a.idInPostgre AS rankedAccommodationID
+	ORDER BY overallRating DESC
+	LIMIT 10
 	`, map[string]interface{}{
 		"filteredAccommodationIDs": filteredAccommodationIDs,
 	})
