@@ -251,3 +251,29 @@ func (service *AccomodationService) GetAccommodationRecommendations(userId strin
 
 	return service.Repo.FindAccommodationsByIds(rankedAccommodation)
 }
+
+func (service *AccomodationService) GetGradesByAccomodationId(accomodationId uuid.UUID) ([]model.HostGrade, error) {
+	grades, err := service.Repo.GetGradesByAccomodationId(accomodationId)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	return grades, err
+
+}
+
+func (service *AccomodationService) EditGrade(gradeId uuid.UUID, newGrade float64) error {
+	err := service.Repo.EditGrade(gradeId, newGrade)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (service *AccomodationService) DeleteGrade(gradeId uuid.UUID) error {
+	err := service.Repo.DeleteGrade(gradeId)
+	if err != nil {
+		return err
+	}
+	return nil
+}

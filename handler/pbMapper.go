@@ -175,6 +175,19 @@ func mapAvailability(availability *model.Availability) *pb.Availability {
 	return availabilityPb
 }
 
+func mapGrades(grade *model.HostGrade) *pb.GradeHost {
+	gradePb := &pb.GradeHost{
+		Id:             grade.ID.String(),
+		AccomodationId: grade.AccommodationId.String(),
+		UserId:         grade.UserId.String(),
+		UserName:       grade.UserName,
+		UserSurname:    grade.UserName,
+		Grade:          strconv.FormatFloat(grade.Grade, 'f', -1, 64),
+		Date:           grade.Date.Format("2006-01-02"),
+	}
+	return gradePb
+}
+
 func mapAccomodationSearchFromSearchRequest(search *pb.SearchRequest) model.AccomodationSearch {
 
 	num, err := strconv.Atoi(search.NumOfGuests)
@@ -220,6 +233,7 @@ func mapAccomodationSearchToSearchRequest(accomodationSearch *model.Accomodation
 
 func mapHostGradeFromRequest(grade *pb.GradeHostRequest) model.HostGrade {
 
+	println("UIDDDDuuuudiiiiiiiDDD: ", grade.AccomodationId, grade.UserId)
 	accommodationID, err := uuid.Parse(grade.AccomodationId)
 	if err != nil {
 		panic(err)
