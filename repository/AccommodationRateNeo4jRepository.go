@@ -66,3 +66,41 @@ func (repo *AccommodationRateNeo4jRepository) SaveRating(rate model.HostGrade) e
 
 	return nil
 }
+
+func (repo *AccommodationRateNeo4jRepository) GetAccommodationAverageRate(accommodationId string) (float64, error) {
+	session := repo.Session
+
+	result, err := session.ReadTransaction(func(tx neo4j.Transaction) (interface{}, error) {
+		params := map[string]interface{}{
+			"accommodationIdInPostgre": accommodationId,
+		}
+
+		query := `
+			MATCH (a:Accommodation {idInPostgre: $accommodationIdInPostgre})<-[:Rate]-(r:User)
+			RETURN avg(r.grade) AS averageRating
+		`
+
+		cursor, err := tx.Run(query, params)
+		if err != nil {
+			return nil, err
+		}
+
+		if cursor.Next() {
+			record := cursor.Record()
+			averageRating := record.GetByIndex(0).(float64)
+			return averageRating, nil
+		}
+
+		return nil, nil
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	if result == nil {
+		return 0, nil
+	}
+
+	return result.(float64), nil
+}
