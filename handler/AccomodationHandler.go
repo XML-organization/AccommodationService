@@ -6,11 +6,13 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	accomodation "github.com/XML-organization/common/proto/accomodation_service"
 	pb "github.com/XML-organization/common/proto/accomodation_service"
 	bookingServicepb "github.com/XML-organization/common/proto/booking_service"
+	userServicepb "github.com/XML-organization/common/proto/user_service"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -351,6 +353,24 @@ func (handler *AccomodationHandler) GradeHost(ctx context.Context, request *pb.G
 	response := pb.GradeHostResponse{
 		Message: message.Message,
 	}
+
+	accomodation, _ := handler.Service.FindByID(hostGrade.AccommodationId)
+	//slanje notifikacije
+
+	conn, err := grpc.Dial("user_service:8000", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
+
+	userService := userServicepb.NewUserServiceClient(conn)
+
+	saveResponse, err := userService.SaveNotification(context.TODO(), &userServicepb.SaveRequest{Id: uuid.NewString(), NotificationTime: time.Now().Format("2006-01-02 15:04:05"), Text: "Korisnik " + hostGrade.UserName + " " + hostGrade.UserSurname + " je ocijeno Vas smjestaj ocjenom: " + strconv.FormatFloat(hostGrade.Grade, 'f', -1, 64) + "  !", UserID: accomodation.IDHost.String(), Status: "0", Category: "AccommodationGraded"})
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	println(saveResponse.Message)
 
 	return &response, err
 }
