@@ -4,7 +4,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type Accomodation struct {
+type RecommendedAccommodation struct {
 	ID            uuid.UUID `json:"id"`
 	Name          string    `json:"name"`
 	Location      string    `json:"location"`
@@ -18,8 +18,5 @@ type Accomodation struct {
 	MinGuests     int       `json:"minGuests"`
 	MaxGuests     int       `json:"maxGuests"`
 	IDHost        uuid.UUID `gorm:"column:id_host" json:"idHost"`
-}
-
-type RequestMessage struct {
-	Message string `json:"message"`
+	AverageGrade  float64   `json:"averageGrade"`
 }

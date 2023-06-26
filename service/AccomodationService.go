@@ -4,19 +4,23 @@ import (
 	"accomodation-service/model"
 	"accomodation-service/repository"
 	"fmt"
-	"strconv"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 type AccomodationService struct {
-	Repo *repository.AccomodationRepository
+	Repo          *repository.AccomodationRepository
+	Neo4jRepo     *repository.AccommodationNeo4jRepository
+	Neo4jRateRepo *repository.AccommodationRateNeo4jRepository
 }
 
-func NewAccomodationService(repo *repository.AccomodationRepository) *AccomodationService {
+func NewAccomodationService(repo *repository.AccomodationRepository, neo4jRepo *repository.AccommodationNeo4jRepository, rateRepo *repository.AccommodationRateNeo4jRepository) *AccomodationService {
 	return &AccomodationService{
-		Repo: repo,
+		Repo:          repo,
+		Neo4jRepo:     neo4jRepo,
+		Neo4jRateRepo: rateRepo,
 	}
 }
 
@@ -26,11 +30,9 @@ func (service *AccomodationService) FindAllAccomodationIDsByHostId(id string) []
 }
 
 func (service *AccomodationService) CreateAccomodation(accomodation *model.Accomodation) (model.RequestMessage, error) {
-	println("acc servis")
-	println(strconv.FormatBool(accomodation.AutoApproval))
-	println(accomodation.Name)
-	println(accomodation.Photos)
-	println(accomodation.IDHost.String())
+
+	accomodation.ID = uuid.New()
+	service.Neo4jRepo.SaveAccommodation(accomodation.ID.String())
 	response := model.RequestMessage{
 		Message: service.Repo.CreateAccomodation(accomodation).Message,
 	}
@@ -41,16 +43,19 @@ func (service *AccomodationService) CreateAccomodation(accomodation *model.Accom
 func (service *AccomodationService) AddOrUpdateAvailability(availability *model.Availability) (model.RequestMessage, error) {
 	existingAvailabilities, err := service.Repo.GetAllAvailabilityByIDAccomodation(availability.IdAccomodation)
 	if err != nil {
+		log.Println(err)
 		return model.RequestMessage{}, err
 	}
 
 	startDate, err := time.Parse("2006-01-02", availability.StartDate)
 	if err != nil {
+		log.Println(err)
 		return model.RequestMessage{}, err
 	}
 
 	endDate, err := time.Parse("2006-01-02", availability.EndDate)
 	if err != nil {
+		log.Println(err)
 		return model.RequestMessage{}, err
 	}
 
@@ -60,11 +65,13 @@ func (service *AccomodationService) AddOrUpdateAvailability(availability *model.
 	for _, existingAvailability := range existingAvailabilities {
 		EAstartDate, err := time.Parse("2006-01-02", existingAvailability.StartDate)
 		if err != nil {
+			log.Println(err)
 			return model.RequestMessage{}, err
 		}
 
 		EAendDate, err := time.Parse("2006-01-02", existingAvailability.EndDate)
 		if err != nil {
+			log.Println(err)
 			return model.RequestMessage{}, err
 		}
 
@@ -85,6 +92,7 @@ func (service *AccomodationService) AddOrUpdateAvailability(availability *model.
 				// Obrisi postojeci termin
 				err = service.Repo.DeleteAvailability(existingAvailability.ID)
 				if err != nil {
+					log.Println(err)
 					return model.RequestMessage{}, err
 				}
 			} else if EAstartDate.Before(startDate) && EAendDate.After(endDate) {
@@ -109,6 +117,7 @@ func (service *AccomodationService) AddOrUpdateAvailability(availability *model.
 				// Obrisi postojeci termin
 				err = service.Repo.DeleteAvailability(existingAvailability.ID)
 				if err != nil {
+					log.Println(err)
 					return model.RequestMessage{}, err
 				}
 			}
@@ -116,6 +125,7 @@ func (service *AccomodationService) AddOrUpdateAvailability(availability *model.
 			// Sačuvaj promene u repozitorijumu
 			err = service.Repo.UpdateAvailability(&existingAvailability)
 			if err != nil {
+				log.Println(err)
 				// Greška pri ažuriranju postojećeg dostupnog termina
 				return model.RequestMessage{}, err
 			}
@@ -133,6 +143,7 @@ func (service *AccomodationService) AddOrUpdateAvailability(availability *model.
 func (service *AccomodationService) GetAllAccomodationsByIDHost(hostID uuid.UUID) ([]model.Accomodation, error) {
 	accomodations, err := service.Repo.GetAllAccomodationByIDHost(hostID)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	return accomodations, nil
@@ -141,6 +152,7 @@ func (service *AccomodationService) GetAllAccomodationsByIDHost(hostID uuid.UUID
 func (service *AccomodationService) GetAllAvailabilitiesByAccomodationID(accomodationID uuid.UUID) ([]model.Availability, error) {
 	availabilities, err := service.Repo.GetAllAvailabilityByIDAccomodation(accomodationID)
 	if err != nil {
+		log.Println(err)
 		return nil, err
 	}
 	return availabilities, nil
@@ -149,6 +161,7 @@ func (service *AccomodationService) GetAllAvailabilitiesByAccomodationID(accomod
 func (service *AccomodationService) FindByLocationAndNumOfGuests(location string, numOfGuests int) ([]model.Accomodation, model.RequestMessage) {
 	accommodations, err := service.Repo.FindByLocationAndNumOfGuests(location, numOfGuests)
 	if err.Message != "Success!" {
+		log.Println(err)
 		return nil, model.RequestMessage{
 			Message: "An error occurred, please try again!",
 		}
@@ -159,6 +172,7 @@ func (service *AccomodationService) FindByLocationAndNumOfGuests(location string
 func (service *AccomodationService) FindByID(id uuid.UUID) (model.Accomodation, model.RequestMessage) {
 	accommodations, err := service.Repo.FindByID(id)
 	if err != nil {
+		log.Println(err)
 		return model.Accomodation{}, model.RequestMessage{
 			Message: "Accomodation not found!",
 		}
@@ -166,4 +180,100 @@ func (service *AccomodationService) FindByID(id uuid.UUID) (model.Accomodation, 
 	return accommodations, model.RequestMessage{
 		Message: "Successfully!",
 	}
+}
+
+func (service *AccomodationService) GetAccomodations() ([]model.Accomodation, error) {
+	accomodations, err := service.Repo.GetAccomodations()
+	if err != nil {
+		return nil, err
+	}
+	return accomodations, nil
+}
+
+func (service *AccomodationService) GradeHost(hostGrade *model.HostGrade) (model.RequestMessage, error) {
+	log.Println("Call function GradeHost")
+
+	service.Neo4jRateRepo.SaveRating(*hostGrade)
+
+	response := model.RequestMessage{
+		Message: service.Repo.GradeHost(hostGrade).Message,
+	}
+
+	return response, nil
+}
+
+func (service *AccomodationService) GetAccommodationRecommendations(userId string) ([]model.Accomodation, error) {
+	log.Println("Call function GetAccommodationRecommendations")
+
+	similarUserIds, err1 := service.Neo4jRepo.FindSimilarUsers(userId)
+
+	if err1 != nil {
+		return []model.Accomodation{}, err1
+	}
+
+	log.Println("Similar users id: ")
+	for _, id := range similarUserIds {
+		log.Println(id)
+	}
+
+	recommendedAccommodationIds, err2 := service.Neo4jRepo.FindRecommendedAccommodations(similarUserIds)
+
+	if err2 != nil {
+		return []model.Accomodation{}, err2
+	}
+
+	log.Println("Recommended accomodations id: ")
+	for _, id := range recommendedAccommodationIds {
+		log.Println(id)
+	}
+
+	filterAndRankAccommodations, err := service.Neo4jRepo.FilterAccommodations(recommendedAccommodationIds)
+
+	if err != nil {
+		return []model.Accomodation{}, err
+	}
+
+	log.Println("Filtered recommended accomodations id: ")
+	for _, id := range filterAndRankAccommodations {
+		log.Println(id)
+	}
+
+	rankedAccommodation, err3 := service.Neo4jRepo.RankAccommodations(filterAndRankAccommodations)
+
+	if err3 != nil {
+		return []model.Accomodation{}, err
+	}
+
+	log.Println("Ranked filtered recommended accomodations id: ")
+	for _, id := range filterAndRankAccommodations {
+		log.Println(id)
+	}
+
+	return service.Repo.FindAccommodationsByIds(rankedAccommodation)
+}
+
+func (service *AccomodationService) GetGradesByAccomodationId(accomodationId uuid.UUID) ([]model.HostGrade, error) {
+	grades, err := service.Repo.GetGradesByAccomodationId(accomodationId)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+	return grades, err
+
+}
+
+func (service *AccomodationService) EditGrade(gradeId uuid.UUID, newGrade float64) error {
+	err := service.Repo.EditGrade(gradeId, newGrade)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (service *AccomodationService) DeleteGrade(gradeId uuid.UUID) error {
+	err := service.Repo.DeleteGrade(gradeId)
+	if err != nil {
+		return err
+	}
+	return nil
 }
